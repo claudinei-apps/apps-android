@@ -15,7 +15,7 @@ android {
         targetSdk 34
         // o celular aceita a atualização por cima só se o número subir
         versionCode Integer.parseInt(numeroBuild)
-        versionName '1.0.' + numeroBuild
+        versionName '2.0.' + numeroBuild
     }
 
     // chave de DEBUG fixa, commitada de propósito (não é segredo: só serve para testes)
@@ -38,4 +38,11 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+}
+
+dependencies {
+    // gera o QR Code dentro do aparelho
+    implementation 'com.google.zxing:core:3.3.3'
+    // impressora da Moderninha (PagBank)
+    implementation 'br.com.uol.pagseguro.plugpagservice.wrapper:wrapper:1.27.2'
 }
