@@ -31,7 +31,7 @@ public class SettingsActivity extends Activity {
         int pad = (int) (16 * getResources().getDisplayMetrics().density);
         box.setPadding(pad, pad, pad, pad);
 
-        box.addView(titulo("Impressora da Moderninha"));
+        box.addView(titulo("Impressora da POS"));
         box.addView(texto("Largura da imagem (se o comprovante sair pequeno ou cortado, troque e teste):"));
         RadioGroup rg = new RadioGroup(this);
         int atual = Prefs.largura(this);
@@ -96,7 +96,7 @@ public class SettingsActivity extends Activity {
         setContentView(sv);
     }
 
-    /** Versão do app, do Android e dos serviços da PagBank instalados. */
+    /** Versão do app, do Android e dos serviços de impressão instalados. */
     private String diagnostico() {
         StringBuilder sb = new StringBuilder();
         try {
@@ -105,12 +105,13 @@ public class SettingsActivity extends Activity {
         }
         sb.append("Android: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")\n");
         sb.append("Aparelho: ").append(Build.MANUFACTURER).append(' ').append(Build.MODEL).append('\n');
-        sb.append("Serviços PagBank:\n");
+        sb.append("Serviços de impressão:\n");
         int n = 0;
         try {
             for (PackageInfo p : getPackageManager().getInstalledPackages(0)) {
                 String name = p.packageName.toLowerCase();
-                if (name.contains("pagseguro") || name.contains("plugpag") || name.contains("pagbank") || name.contains("uol")) {
+                if (name.contains("xcheng") || name.contains("print") || name.contains("pagseguro")
+                        || name.contains("plugpag") || name.contains("pax")) {
                     sb.append("- ").append(p.packageName).append(" ").append(p.versionName).append('\n');
                     n++;
                 }
@@ -139,7 +140,7 @@ public class SettingsActivity extends Activity {
     }
 
     private void testar() {
-        status.setText("Imprimindo teste... (aguarde até 30 segundos)");
+        status.setText("Imprimindo teste... (aguarde)");
         final int largura = Prefs.largura(this);
         final String url = Prefs.host(this) + "/onlinegames/bingo-pix/ticket.php";
         new Thread(() -> {
@@ -147,7 +148,8 @@ public class SettingsActivity extends Activity {
             try {
                 Bitmap bmp = ReceiptRenderer.test(largura, url);
                 PrinterA930.Result r = PrinterA930.print(SettingsActivity.this, bmp);
-                msg = r.ok ? "Teste impresso. Confira se o QR Code saiu nítido." : r.message;
+                msg = r.ok ? "Teste enviado à impressora. Confira se o QR Code saiu nítido." : r.message;
+                if (r.ok) msg += "\nFirmware da impressora: " + PrinterA930.firmware(SettingsActivity.this);
             } catch (Throwable e) {
                 msg = "Erro: " + e.getMessage();
             }
