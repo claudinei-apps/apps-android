@@ -5,8 +5,9 @@ plugins {
 // número de build vindo do GitHub (sobe a cada execução); fora do GitHub vale 1
 def numeroBuild = System.getenv('GITHUB_RUN_NUMBER') ?: '1'
 // versão do kit da PagBank. Existentes: 1.7.6 1.8.5 1.9.0 1.10.0 1.11.5 1.12.0 1.13.0 1.15.3 1.17.0
-// 1.20.2 1.21.0 1.22.0 1.24.0 1.25.0 1.26.1 1.27.2 (1.27.2 exige "Terminal Service 1.4.0")
-def kitPlugPag = '1.12.0'
+// 1.20.2 1.21.0 1.22.0 1.24.0 1.25.0 1.26.1 1.27.2 ...
+// Testes na Moderninha Smart: 1.27.2 exige "Terminal Service 1.4.0"; 1.12.0 fica travado sem resposta.
+def kitPlugPag = '1.26.1'
 
 android {
     namespace 'br.teste.android'
