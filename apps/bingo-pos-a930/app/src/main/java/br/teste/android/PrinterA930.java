@@ -1,23 +1,28 @@
 package br.teste.android;
 
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Bitmap;
+import android.os.Binder;
+import android.os.IBinder;
+import android.os.Parcel;
+import android.os.RemoteException;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.lang.reflect.Constructor;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import br.com.uol.pagseguro.plugpagservice.wrapper.PlugPag;
-import br.com.uol.pagseguro.plugpagservice.wrapper.PlugPagPrintResult;
-import br.com.uol.pagseguro.plugpagservice.wrapper.PlugPagPrinterData;
-
-/** Envia uma imagem para a impressora da Moderninha pelo serviço oficial da PagBank. */
+/**
+ * Impressora interna da POS pelo serviço do sistema "com.xcheng.printerservice"
+ * (o mesmo usado pelo app que já imprime QR Code nessa A930).
+ * A interface foi reproduzida à mão (códigos de chamada iguais aos do serviço).
+ */
 public final class PrinterA930 {
 
     public static final class Result {
@@ -32,77 +37,186 @@ public final class PrinterA930 {
         }
     }
 
-    private static final int LIMITE_SEGUNDOS = 30;
-    private static volatile PlugPag plugPag;
+    static final String PKG = "com.xcheng.printerservice";
+    static final String DESC = "com.xcheng.printerservice.IPrinterService";
+    static final String DESC_CB = "com.xcheng.printerservice.IPrinterCallback";
+
+    // códigos de chamada do serviço
+    private static final int TX_FIRMWARE = 2;
+    private static final int TX_INIT = 4;
+    private static final int TX_WRAP = 6;
+    private static final int TX_BITMAP = 10;
+
+    private static final int LIMITE_SEGUNDOS = 60;
+    private static final int FATIA = 240; // linhas por pedaço de imagem
+
+    private static volatile IBinder remote;
+    private static ServiceConnection conn;
     private static final ExecutorService trabalho = Executors.newCachedThreadPool();
 
     private PrinterA930() {}
 
-    private static File folder(Context c) {
-        File dir = c.getExternalFilesDir(null);
-        if (dir == null) dir = c.getFilesDir();
-        if (!dir.exists()) dir.mkdirs();
-        return dir;
-    }
+    private interface Escrita { void em(Parcel p); }
 
-    /** Cria o PlugPag com o construtor que a versão do kit tiver (antiga ou nova). */
-    private static PlugPag criar(Context ctx) throws Exception {
-        try {
-            Constructor<PlugPag> c = PlugPag.class.getConstructor(Context.class);
-            return c.newInstance(ctx);
-        } catch (NoSuchMethodException e) {
-            Class<?> idCls = Class.forName("br.com.uol.pagseguro.plugpagservice.wrapper.PlugPagAppIdentification");
-            Object id = idCls.getConstructor(String.class, String.class).newInstance("BingoPOS", "2.0");
-            Constructor<PlugPag> c = PlugPag.class.getConstructor(Context.class, idCls);
-            return c.newInstance(ctx, id);
+    /** Recebe o retorno da impressora (fim ou erro). */
+    private static final class Retorno extends Binder {
+        final CountDownLatch fim = new CountDownLatch(1);
+        volatile String erro;
+
+        @Override
+        protected boolean onTransact(int code, Parcel data, Parcel reply, int flags) throws RemoteException {
+            if (code == INTERFACE_TRANSACTION) {
+                if (reply != null) reply.writeString(DESC_CB);
+                return true;
+            }
+            try {
+                data.enforceInterface(DESC_CB);
+            } catch (Throwable ignored) {
+            }
+            switch (code) {
+                case 1: { // onException(int, String)
+                    int c = data.readInt();
+                    String m = data.readString();
+                    erro = m + " (" + c + ")";
+                    fim.countDown();
+                    return true;
+                }
+                case 4: // onComplete
+                    fim.countDown();
+                    return true;
+                case 2: // onLength
+                case 3: // onRealLength
+                    return true;
+                default:
+                    return super.onTransact(code, data, reply, flags);
+            }
+        }
+
+        boolean esperar(int segundos) {
+            try {
+                return fim.await(segundos, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                return false;
+            }
         }
     }
 
-    private static Throwable raiz(Throwable e) {
-        while (e.getCause() != null && e.getCause() != e) e = e.getCause();
-        return e;
+    private static synchronized IBinder conectar(Context ctx) throws Exception {
+        IBinder b = remote;
+        if (b != null && b.isBinderAlive()) return b;
+        final CountDownLatch latch = new CountDownLatch(1);
+        final IBinder[] caixa = new IBinder[1];
+        if (conn != null) {
+            try { ctx.getApplicationContext().unbindService(conn); } catch (Throwable ignored) {}
+        }
+        conn = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {
+                caixa[0] = service;
+                remote = service;
+                latch.countDown();
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+                remote = null;
+            }
+        };
+        Intent i = new Intent(DESC);
+        i.setPackage(PKG);
+        boolean ok = ctx.getApplicationContext().bindService(i, conn, Context.BIND_AUTO_CREATE);
+        if (!ok) throw new Exception("serviço de impressão (" + PKG + ") não existe nesta POS");
+        if (!latch.await(8, TimeUnit.SECONDS)) throw new Exception("serviço de impressão não respondeu ao conectar");
+        return caixa[0];
     }
 
-    /** Bloqueia até terminar (no máximo 30 s): chamar fora da tela principal. */
-    public static synchronized Result print(final Context context, Bitmap bmp) {
-        final File file = new File(folder(context), "comprovante.png");
+    private static void chamar(IBinder b, int code, Escrita w) throws RemoteException {
+        Parcel d = Parcel.obtain();
+        Parcel r = Parcel.obtain();
         try {
-            FileOutputStream out = new FileOutputStream(file);
-            bmp.compress(Bitmap.CompressFormat.PNG, 100, out);
-            out.flush();
-            out.close();
-            file.setReadable(true, false);
-        } catch (Exception e) {
-            return new Result(false, "Não consegui preparar a imagem: " + e.getMessage(), "FILE");
+            d.writeInterfaceToken(DESC);
+            if (w != null) w.em(d);
+            b.transact(code, d, r, 0);
+            r.readException();
+        } finally {
+            d.recycle();
+            r.recycle();
         }
-        final int passos = Prefs.avanco(context);
+    }
+
+    private static Result fazer(Context ctx, Bitmap bmp) throws Exception {
+        IBinder b = conectar(ctx);
+
+        final Retorno ini = new Retorno();
+        chamar(b, TX_INIT, p -> p.writeStrongBinder(ini));
+        ini.esperar(3);
+
+        int altura = bmp.getHeight();
+        for (int y = 0; y < altura; y += FATIA) {
+            int h = Math.min(FATIA, altura - y);
+            final Bitmap parte = Bitmap.createBitmap(bmp, 0, y, bmp.getWidth(), h);
+            final Retorno rt = new Retorno();
+            chamar(b, TX_BITMAP, p -> {
+                p.writeInt(1);
+                parte.writeToParcel(p, 0);
+                p.writeStrongBinder(rt);
+            });
+            rt.esperar(10);
+            if (parte != bmp) parte.recycle();
+            if (rt.erro != null) return new Result(false, "A impressora recusou: " + rt.erro, "PRINTER_ERROR");
+        }
+
+        final int linhas = Math.max(1, Prefs.avanco(ctx) / 25);
+        final Retorno fim = new Retorno();
+        chamar(b, TX_WRAP, p -> {
+            p.writeInt(linhas);
+            p.writeStrongBinder(fim);
+        });
+        fim.esperar(5);
+        if (fim.erro != null) return new Result(false, "A impressora recusou: " + fim.erro, "PRINTER_ERROR");
+        return new Result(true, "Impresso.", "PRINTED");
+    }
+
+    /** Bloqueia até terminar (no máximo 60 s): chamar fora da tela principal. */
+    public static synchronized Result print(final Context context, final Bitmap bmp) {
         Future<Result> f = trabalho.submit(new Callable<Result>() {
             @Override
             public Result call() throws Exception {
-                if (plugPag == null) plugPag = criar(context.getApplicationContext());
-                PlugPagPrinterData data = new PlugPagPrinterData(file.getAbsolutePath(), 4, passos);
-                PlugPagPrintResult r = plugPag.printFromFile(data);
-                if (r != null && r.getResult() == PlugPag.RET_OK) {
-                    return new Result(true, "Impresso.", "PRINTED");
-                }
-                String msg = r == null ? "sem resposta" : (r.getMessage() + " (" + r.getErrorCode() + ")");
-                return new Result(false, "A impressora recusou: " + msg, "PRINTER_ERROR");
+                return fazer(context, bmp);
             }
         });
         try {
             return f.get(LIMITE_SEGUNDOS, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             f.cancel(true);
-            plugPag = null;
-            return new Result(false,
-                    "A impressora da Moderninha não respondeu em " + LIMITE_SEGUNDOS + " s.", "PRINTER_TIMEOUT");
+            remote = null;
+            return new Result(false, "A impressora não respondeu em " + LIMITE_SEGUNDOS + " s.", "PRINTER_TIMEOUT");
         } catch (Throwable e) {
-            plugPag = null;
-            Throwable c = raiz(e);
-            return new Result(false,
-                    "Impressora da Moderninha indisponível: " + c.getClass().getSimpleName()
-                            + (c.getMessage() == null ? "" : " - " + c.getMessage()),
-                    "PRINTER_UNAVAILABLE");
+            remote = null;
+            Throwable c = e;
+            while (c.getCause() != null && c.getCause() != c) c = c.getCause();
+            return new Result(false, "Impressora indisponível: "
+                    + (c.getMessage() == null ? c.getClass().getSimpleName() : c.getMessage()), "PRINTER_UNAVAILABLE");
+        }
+    }
+
+    /** Versão do firmware da impressora (para a tela de informações). */
+    public static String firmware(Context ctx) {
+        try {
+            IBinder b = conectar(ctx);
+            Parcel d = Parcel.obtain();
+            Parcel r = Parcel.obtain();
+            try {
+                d.writeInterfaceToken(DESC);
+                b.transact(TX_FIRMWARE, d, r, 0);
+                r.readException();
+                return r.readString();
+            } finally {
+                d.recycle();
+                r.recycle();
+            }
+        } catch (Throwable e) {
+            return "indisponível (" + e.getMessage() + ")";
         }
     }
 }
