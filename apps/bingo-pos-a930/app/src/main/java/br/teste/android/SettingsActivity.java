@@ -1,8 +1,10 @@
 package br.teste.android;
 
 import android.app.Activity;
+import android.content.pm.PackageInfo;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -83,10 +85,41 @@ public class SettingsActivity extends Activity {
         voltar.setOnClickListener(v -> finish());
         box.addView(voltar);
 
+        box.addView(titulo("Informações técnicas"));
+        TextView info = texto(diagnostico());
+        info.setTextSize(13);
+        box.addView(info);
+
         ScrollView sv = new ScrollView(this);
         sv.setBackgroundColor(Color.WHITE);
         sv.addView(box);
         setContentView(sv);
+    }
+
+    /** Versão do app, do Android e dos serviços da PagBank instalados. */
+    private String diagnostico() {
+        StringBuilder sb = new StringBuilder();
+        try {
+            sb.append("App: ").append(getPackageManager().getPackageInfo(getPackageName(), 0).versionName).append('\n');
+        } catch (Exception ignored) {
+        }
+        sb.append("Android: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")\n");
+        sb.append("Aparelho: ").append(Build.MANUFACTURER).append(' ').append(Build.MODEL).append('\n');
+        sb.append("Serviços PagBank:\n");
+        int n = 0;
+        try {
+            for (PackageInfo p : getPackageManager().getInstalledPackages(0)) {
+                String name = p.packageName.toLowerCase();
+                if (name.contains("pagseguro") || name.contains("plugpag") || name.contains("pagbank") || name.contains("uol")) {
+                    sb.append("- ").append(p.packageName).append(" ").append(p.versionName).append('\n');
+                    n++;
+                }
+            }
+        } catch (Exception e) {
+            sb.append("(não consegui listar)\n");
+        }
+        if (n == 0) sb.append("(nenhum encontrado)\n");
+        return sb.toString();
     }
 
     private TextView titulo(String t) {
@@ -106,7 +139,7 @@ public class SettingsActivity extends Activity {
     }
 
     private void testar() {
-        status.setText("Imprimindo teste...");
+        status.setText("Imprimindo teste... (aguarde até 30 segundos)");
         final int largura = Prefs.largura(this);
         final String url = Prefs.host(this) + "/onlinegames/bingo-pix/ticket.php";
         new Thread(() -> {
@@ -114,7 +147,6 @@ public class SettingsActivity extends Activity {
             try {
                 Bitmap bmp = ReceiptRenderer.test(largura, url);
                 PrinterA930.Result r = PrinterA930.print(SettingsActivity.this, bmp);
-                bmp.recycle();
                 msg = r.ok ? "Teste impresso. Confira se o QR Code saiu nítido." : r.message;
             } catch (Throwable e) {
                 msg = "Erro: " + e.getMessage();
