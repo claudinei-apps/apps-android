@@ -17,7 +17,8 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 public class MainActivity extends Activity {
-    private static final String URL = "https://bingo.turfkeno.online/onlinegames/bingo-pix/tv-ponto.php";
+    private static final String HOST = "bingo.turfkeno.online";
+    private static final String URL = "https://" + HOST + "/onlinegames/bingo-pix/tv-ponto.php";
     private FrameLayout raiz;
     private WebView web;
     private TextView aviso;
@@ -73,9 +74,15 @@ public class MainActivity extends Activity {
 
                 @Override
                 public void onReceivedSslError(WebView v, android.webkit.SslErrorHandler h, android.net.http.SslError e) {
-                    // TVs com data/hora errada ou certificados antigos: nao deixa a TV travada
+                    // TVs antigas nao tem o certificado raiz novo: aceita so para o dominio do Bingo
+                    String host = "";
+                    try { host = android.net.Uri.parse(e.getUrl()).getHost(); } catch (Throwable t) { }
+                    if (HOST.equals(host)) {
+                        h.proceed();
+                        return;
+                    }
                     h.cancel();
-                    falha("Erro de seguranca (confira data e hora da TV).\nTentando novamente...");
+                    falha("Erro de seguranca na conexao.\nTentando novamente...");
                 }
             });
             raiz.addView(web, 0, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
