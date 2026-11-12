@@ -1,7 +1,9 @@
 package br.teste.android;
 
 import android.app.Activity;
+import android.content.Context;
 import android.graphics.Color;
+import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.Gravity;
@@ -10,6 +12,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -30,6 +33,12 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         try {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        } catch (Throwable t) { }
+        try {
+            setVolumeControlStream(AudioManager.STREAM_MUSIC);
+            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            am.setStreamMute(AudioManager.STREAM_MUSIC, false);
+            am.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
         } catch (Throwable t) { }
         raiz = new FrameLayout(this);
         raiz.setBackgroundColor(Color.BLACK);
@@ -58,6 +67,7 @@ public class MainActivity extends Activity {
                 CookieManager cm = CookieManager.getInstance();
                 cm.setAcceptCookie(true);
             } catch (Throwable t) { }
+            web.setWebChromeClient(new WebChromeClient());
             web.setWebViewClient(new WebViewClient() {
                 @Override
                 public void onPageFinished(WebView v, String u) {
