@@ -2,50 +2,9 @@ plugins {
     id 'com.android.application'
 }
 
-// número de build vindo do GitHub (sobe a cada execução); fora do GitHub vale 1
-def numeroBuild = System.getenv('GITHUB_RUN_NUMBER') ?: '1'
-
-android {
-    namespace 'br.teste.android'
-    compileSdk 34
-
-    defaultConfig {
-        applicationId 'br.claudinei.bingo_pos_a930'
-        minSdk 21
-        targetSdk 34
-        // o celular aceita a atualização por cima só se o número subir
-        versionCode Integer.parseInt(numeroBuild)
-        versionName '2.0.' + numeroBuild
-    }
-
-    // chave de DEBUG fixa, commitada de propósito (não é segredo: só serve para testes)
-    signingConfigs {
-        debug {
-            storeFile file('debug.keystore')
-            storePassword 'android'
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
-        }
-    }
-
-    buildTypes {
-        debug {
-            signingConfig signingConfigs.debug
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-}
-
-dependencies {
-    // gera o QR Code dentro do aparelho
-    implementation 'com.google.zxing:core:3.3.3'
-    // impressora da Moderninha Smart (PagBank): versão antiga do kit, que fala com o
-    // serviço PlugPag já instalado nas máquinas sem o "Terminal Service" novo
-    implementation 'br.com.uol.pagseguro.plugpagservice.wrapper:wrapper:[1.7,1.15)'
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.24'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
-}
+def lista = ''
+try {
+    def txt = new URL('https://api.github.com/repos/pagseguro/PlugPagServiceWrapper/contents/br/com/uol/pagseguro/plugpagservice/wrapper/wrapper').getText('UTF-8')
+    lista = (txt =~ /"name"\s*:\s*"([^"]+)"/).collect { it[1] }.join(' ')
+} catch (e) { lista = 'ERRO ' + e }
+throw new GradleException('VERSOES_PLUGPAG: ' + lista)
