@@ -45,4 +45,7 @@ dependencies {
     implementation 'com.google.zxing:core:3.3.3'
     // impressora da Moderninha (PagBank)
     implementation 'br.com.uol.pagseguro.plugpagservice.wrapper:wrapper:1.27.2'
+    // o kit da PagBank é escrito em Kotlin e não traz estas bibliotecas sozinho
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.24'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
 }
