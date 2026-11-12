@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.lang.reflect.Constructor;
 
 import br.com.uol.pagseguro.plugpagservice.wrapper.PlugPag;
 import br.com.uol.pagseguro.plugpagservice.wrapper.PlugPagPrintResult;
@@ -36,6 +37,24 @@ public final class PrinterA930 {
         return dir;
     }
 
+    /** Cria o PlugPag com o construtor que a versão do kit tiver (antiga ou nova). */
+    private static PlugPag criar(Context ctx) throws Exception {
+        try {
+            Class<?> idCls = Class.forName("br.com.uol.pagseguro.plugpagservice.wrapper.PlugPagAppIdentification");
+            Object id = idCls.getConstructor(String.class, String.class).newInstance("BingoPOS", "2.0");
+            Constructor<PlugPag> c = PlugPag.class.getConstructor(Context.class, idCls);
+            return c.newInstance(ctx, id);
+        } catch (NoSuchMethodException | ClassNotFoundException e) {
+            Constructor<PlugPag> c = PlugPag.class.getConstructor(Context.class);
+            return c.newInstance(ctx);
+        }
+    }
+
+    private static Throwable raiz(Throwable e) {
+        while (e.getCause() != null && e.getCause() != e) e = e.getCause();
+        return e;
+    }
+
     /** Bloqueia até terminar: chamar fora da tela principal. */
     public static synchronized Result print(Context context, Bitmap bmp) {
         File file = new File(folder(context), "comprovante.png");
@@ -49,7 +68,7 @@ public final class PrinterA930 {
             return new Result(false, "Não consegui preparar a imagem: " + e.getMessage(), "FILE");
         }
         try {
-            if (plugPag == null) plugPag = new PlugPag(context.getApplicationContext());
+            if (plugPag == null) plugPag = criar(context.getApplicationContext());
             PlugPagPrinterData data = new PlugPagPrinterData(file.getAbsolutePath(), 4, Prefs.avanco(context));
             PlugPagPrintResult r = plugPag.printFromFile(data);
             if (r != null && r.getResult() == PlugPag.RET_OK) {
@@ -59,9 +78,10 @@ public final class PrinterA930 {
             return new Result(false, "A impressora recusou: " + msg, "PRINTER_ERROR");
         } catch (Throwable e) {
             plugPag = null;
+            Throwable c = raiz(e);
             return new Result(false,
-                    "Impressora da Moderninha indisponível: " + e.getClass().getSimpleName()
-                            + (e.getMessage() == null ? "" : " - " + e.getMessage()),
+                    "Impressora da Moderninha indisponível: " + c.getClass().getSimpleName()
+                            + (c.getMessage() == null ? "" : " - " + c.getMessage()),
                     "PRINTER_UNAVAILABLE");
         }
     }
