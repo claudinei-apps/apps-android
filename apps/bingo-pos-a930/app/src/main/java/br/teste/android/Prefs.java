@@ -39,4 +39,8 @@ public final class Prefs {
 
     public static int modo(Context c) { return sp(c).getInt("modo2", MODO_TEXTO); }
     public static void setModo(Context c, int v) { sp(c).edit().putInt("modo2", v).apply(); }
+
+    /** 0 = Bluetooth; outro número = porta da rede interna da POS (127.0.0.1). */
+    public static int porta(Context c) { return sp(c).getInt("porta", 0); }
+    public static void setPorta(Context c, int v) { sp(c).edit().putInt("porta", v).apply(); }
 }
