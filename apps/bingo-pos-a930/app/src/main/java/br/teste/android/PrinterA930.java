@@ -37,9 +37,9 @@ import java.util.concurrent.TimeoutException;
 /**
  * Impressora interna da PAX A930 exposta pelo sistema como impressora Bluetooth
  * ("Bluetooth Printer", app com.pax.paxbtprinter). Envia comandos ESC/POS.
- * Testes na A930: texto funciona; QR próprio da impressora (GS ( k) não sai.
- * O QR é enviado do mesmo jeito que o app DG Vendas (que imprime QR nessa máquina):
- * imagem de 250 px, UM bloco GS v 0, centralizado e seguido de quebra de linha.
+ * Testes na A930: texto funciona; QR próprio da impressora (GS ( k) não sai;
+ * o final do comprovante ficava preso e saía no começo do próximo.
+ * Agora: conexão fica aberta (como o app DG Vendas) e o final leva várias linhas em branco.
  */
 public final class PrinterA930 {
 
@@ -59,6 +59,9 @@ public final class PrinterA930 {
     private static final int LIMITE_SEGUNDOS = 60;
     private static final int COLUNAS = 32;
     private static final ExecutorService trabalho = Executors.newCachedThreadPool();
+
+    private static BluetoothSocket sock;
+    private static String sockEndereco;
 
     private PrinterA930() {}
 
@@ -129,6 +132,22 @@ public final class PrinterA930 {
             return s;
         } catch (Exception e) { ultimo = e; }
         throw new Exception("não conectou na impressora " + nome(d) + ": " + (ultimo == null ? "" : ultimo.getMessage()));
+    }
+
+    private static void fechar() {
+        try { if (sock != null) sock.close(); } catch (Throwable ignored) {}
+        sock = null;
+        sockEndereco = null;
+    }
+
+    /** Conexão reaproveitada entre impressões, como faz o app DG Vendas. */
+    private static OutputStream saida(BluetoothDevice d) throws Exception {
+        if (sock == null || !sock.isConnected() || !d.getAddress().equals(sockEndereco)) {
+            fechar();
+            sock = conectar(d);
+            sockEndereco = d.getAddress();
+        }
+        return sock.getOutputStream();
     }
 
     // ---------- montagem ESC/POS ----------
@@ -273,7 +292,6 @@ public final class PrinterA930 {
             for (int i = 0; i < arr.length(); i++) {
                 sb.append(dois(arr.optString(i)));
                 if ((i + 1) % cols == 0 || i == arr.length() - 1) {
-                    // a impressora volta ao tamanho normal a cada linha: reaplica o tamanho grande
                     w(o, CENTRO); w(o, resumo ? NEGRITO : DUPLO);
                     txt(o, sb.toString());
                     sb.setLength(0);
@@ -334,26 +352,32 @@ public final class PrinterA930 {
             else rasterEscStar(o, bmp);
             bmp.recycle();
         }
-        int linhas = Math.max(2, Prefs.avanco(ctx) / 25);
-        o.write(0x1B); o.write(0x64); o.write(linhas);
+        // final igual ao app DG: várias linhas em branco + retorno, para a impressora soltar tudo
+        int linhas = Math.max(4, Prefs.avanco(ctx) / 20);
+        for (int i = 0; i < linhas; i++) o.write('\n');
+        o.write('\r'); o.write('\n');
+        o.write(0x1C); o.write(0x2E);
         return o.toByteArray();
+    }
+
+    private static void escrever(OutputStream out, byte[] dados) throws Exception {
+        for (int i = 0; i < dados.length; i += 512) {
+            out.write(dados, i, Math.min(512, dados.length - i));
+            out.flush();
+            Thread.sleep(15);
+        }
     }
 
     private static Result enviar(Context ctx, byte[] dados) throws Exception {
         BluetoothDevice d = escolher(ctx);
-        BluetoothSocket s = conectar(d);
         try {
-            OutputStream out = s.getOutputStream();
-            for (int i = 0; i < dados.length; i += 512) {
-                out.write(dados, i, Math.min(512, dados.length - i));
-                out.flush();
-                Thread.sleep(15);
-            }
-            // dá tempo da impressora receber tudo antes de fechar a conexão
-            Thread.sleep(Math.min(8000, 1500 + dados.length / 10));
-        } finally {
-            try { s.close(); } catch (Throwable ignored) {}
+            escrever(saida(d), dados);
+        } catch (Exception primeira) {
+            // conexão antiga caiu: reconecta e tenta mais uma vez
+            fechar();
+            escrever(saida(d), dados);
         }
+        Thread.sleep(500);
         return new Result(true, "Enviado para " + nome(d) + ".", "PRINTED");
     }
 
@@ -363,8 +387,10 @@ public final class PrinterA930 {
             return f.get(LIMITE_SEGUNDOS, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             f.cancel(true);
+            fechar();
             return new Result(false, "A impressora não respondeu em " + LIMITE_SEGUNDOS + " s.", "PRINTER_TIMEOUT");
         } catch (Throwable e) {
+            fechar();
             Throwable c = e;
             while (c.getCause() != null && c.getCause() != c) c = c.getCause();
             return new Result(false, "Não imprimiu: "
