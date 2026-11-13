@@ -9,10 +9,14 @@ public final class Prefs {
     public static final String HOST_RESERVA = "https://bingo.turfkeno.online";
     public static final String CAMINHO_POS = "/onlinegames/bingo-pix/pos.php";
 
-    /** Modos: 0 = imagem tipo A (ESC *), 1 = imagem tipo B (GS v 0), 2 = texto + QR da impressora. */
+    /**
+     * Modos: 0 = tudo imagem A (ESC *), 1 = tudo imagem B (GS v 0),
+     * 2 = texto + QR em imagem A, 3 = texto + QR em imagem B.
+     */
     public static final int MODO_IMAGEM_A = 0;
     public static final int MODO_IMAGEM_B = 1;
     public static final int MODO_TEXTO = 2;
+    public static final int MODO_TEXTO_B = 3;
 
     private Prefs() {}
 
@@ -33,6 +37,6 @@ public final class Prefs {
     public static String bt(Context c) { return sp(c).getString("bt", ""); }
     public static void setBt(Context c, String v) { sp(c).edit().putString("bt", v).apply(); }
 
-    public static int modo(Context c) { return sp(c).getInt("modo2", MODO_IMAGEM_A); }
+    public static int modo(Context c) { return sp(c).getInt("modo2", MODO_TEXTO); }
     public static void setModo(Context c, int v) { sp(c).edit().putInt("modo2", v).apply(); }
 }

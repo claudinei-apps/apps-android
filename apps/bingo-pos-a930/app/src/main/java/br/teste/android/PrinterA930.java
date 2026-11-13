@@ -5,6 +5,13 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Color;
+
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -15,7 +22,9 @@ import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -28,6 +37,8 @@ import java.util.concurrent.TimeoutException;
 /**
  * Impressora interna da PAX A930 exposta pelo sistema como impressora Bluetooth
  * ("Bluetooth Printer", app com.pax.paxbtprinter). Envia comandos ESC/POS.
+ * Teste na A930: texto funciona; o comando de QR próprio da impressora não é aceito,
+ * por isso o QR é desenhado pelo app e enviado como imagem.
  */
 public final class PrinterA930 {
 
@@ -157,7 +168,7 @@ public final class PrinterA930 {
         }
     }
 
-    /** Imagem tipo A: comando ESC * 33 (faixas de 24 pontos), o mais aceito pelas impressoras. */
+    /** Imagem tipo A: comando ESC * 33 (faixas de 24 pontos). */
     private static void rasterEscStar(ByteArrayOutputStream o, Bitmap bmp) {
         int w = bmp.getWidth(), h = bmp.getHeight();
         int[] px = new int[w * 24];
@@ -183,23 +194,31 @@ public final class PrinterA930 {
         o.write(0x1B); o.write(0x32); // espaçamento padrão
     }
 
-    private static void qrNativo(ByteArrayOutputStream o, String url) {
-        byte[] d = url.getBytes(Charset.forName("UTF-8"));
-        int len = d.length + 3;
-        o.write(CENTRO, 0, 3);
-        byte[][] cmds = {
-                {0x1D, 0x28, 0x6B, 4, 0, 0x31, 0x41, 0x32, 0},
-                {0x1D, 0x28, 0x6B, 3, 0, 0x31, 0x43, 6},
-                {0x1D, 0x28, 0x6B, 3, 0, 0x31, 0x45, 0x31},
-        };
-        for (byte[] c : cmds) o.write(c, 0, c.length);
-        o.write(0x1D); o.write(0x28); o.write(0x6B); o.write(len & 0xFF); o.write((len >> 8) & 0xFF);
-        o.write(0x31); o.write(0x50); o.write(0x30);
-        o.write(d, 0, d.length);
-        byte[] p = {0x1D, 0x28, 0x6B, 3, 0, 0x31, 0x51, 0x30};
-        o.write(p, 0, p.length);
-        o.write('\n');
-        o.write(ESQUERDA, 0, 3);
+    /** QR desenhado pelo app, centralizado numa faixa de 384 pontos, enviado como imagem. */
+    private static void qrImagem(ByteArrayOutputStream o, String url, boolean tipoB) {
+        try {
+            int largura = 384;
+            int lado = 264;
+            Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
+            hints.put(EncodeHintType.MARGIN, 1);
+            hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M);
+            hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
+            BitMatrix m = new QRCodeWriter().encode(url, BarcodeFormat.QR_CODE, lado, lado, hints);
+            Bitmap b = Bitmap.createBitmap(largura, m.getHeight(), Bitmap.Config.ARGB_8888);
+            b.eraseColor(Color.WHITE);
+            int x0 = Math.max(0, (largura - m.getWidth()) / 2);
+            for (int y = 0; y < m.getHeight(); y++) {
+                for (int x = 0; x < m.getWidth() && x0 + x < largura; x++) {
+                    if (m.get(x, y)) b.setPixel(x0 + x, y, Color.BLACK);
+                }
+            }
+            w(o, ESQUERDA);
+            if (tipoB) rasterGsv0(o, b);
+            else rasterEscStar(o, b);
+            b.recycle();
+        } catch (Exception e) {
+            txt(o, url);
+        }
     }
 
     private static String ascii(String s) {
@@ -229,7 +248,7 @@ public final class PrinterA930 {
         return t.length() == 1 ? "0" + t : t;
     }
 
-    private static void textoTicket(ByteArrayOutputStream o, JSONObject t) {
+    private static void textoTicket(ByteArrayOutputStream o, JSONObject t, boolean tipoB) {
         boolean resumo = "BINGO_SUMMARY".equals(t.optString("receiptKind"));
         String linha = "--------------------------------";
         w(o, CENTRO); w(o, NEGRITO);
@@ -247,12 +266,15 @@ public final class PrinterA930 {
         JSONArray arr = resumo ? t.optJSONArray("cardIds") : t.optJSONArray("numbers");
         if (arr != null) {
             int cols = resumo ? 3 : 5;
-            w(o, CENTRO); w(o, resumo ? NEGRITO : DUPLO);
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < arr.length(); i++) {
                 sb.append(dois(arr.optString(i)));
-                if ((i + 1) % cols == 0 || i == arr.length() - 1) { txt(o, sb.toString()); sb.setLength(0); }
-                else sb.append(resumo ? "   " : " ");
+                if ((i + 1) % cols == 0 || i == arr.length() - 1) {
+                    // a impressora volta ao tamanho normal a cada linha: reaplica o tamanho grande
+                    w(o, CENTRO); w(o, resumo ? NEGRITO : DUPLO);
+                    txt(o, sb.toString());
+                    sb.setLength(0);
+                } else sb.append(resumo ? "   " : " ");
             }
             w(o, NORMAL); w(o, ESQUERDA);
         }
@@ -281,8 +303,10 @@ public final class PrinterA930 {
         String url = t.optString("validationUrl");
         if (!url.isEmpty()) {
             txt(o, linha);
-            w(o, CENTRO); w(o, NEGRITO); txt(o, "CONFIRA SEU PREMIO"); w(o, NORMAL); w(o, ESQUERDA);
-            qrNativo(o, url);
+            w(o, CENTRO); w(o, NEGRITO); txt(o, "CONFIRA SEU PREMIO"); w(o, NORMAL);
+            txt(o, "Aponte a camera do celular");
+            w(o, ESQUERDA);
+            qrImagem(o, url, tipoB);
         }
     }
 
@@ -290,14 +314,15 @@ public final class PrinterA930 {
         ByteArrayOutputStream o = new ByteArrayOutputStream();
         w(o, INIT);
         int modo = Prefs.modo(ctx);
-        if (modo == Prefs.MODO_TEXTO) {
-            if (ticket != null) textoTicket(o, ticket);
+        if (modo == Prefs.MODO_TEXTO || modo == Prefs.MODO_TEXTO_B) {
+            boolean tipoB = modo == Prefs.MODO_TEXTO_B;
+            if (ticket != null) textoTicket(o, ticket, tipoB);
             else {
                 w(o, CENTRO); w(o, DUPLO); txt(o, "TESTE"); w(o, NORMAL);
-                txt(o, "Bingo POS A930 - modo texto");
+                txt(o, "Bingo POS A930 - texto + QR " + (tipoB ? "B" : "A"));
                 txt(o, "O QR abaixo deve abrir o site");
                 w(o, ESQUERDA);
-                qrNativo(o, urlTeste);
+                qrImagem(o, urlTeste, tipoB);
             }
         } else {
             int largura = Prefs.largura(ctx);
