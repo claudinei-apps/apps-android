@@ -25,7 +25,8 @@ public class SettingsActivity extends Activity {
 
     private static final int[] LARGURAS = {384, 576};
     private TextView status;
-    private RadioGroup impressoras;
+    private TextView escolhida;
+    private LinearLayout impressoras;
     private final Handler ui = new Handler(Looper.getMainLooper());
 
     @Override
@@ -40,8 +41,12 @@ public class SettingsActivity extends Activity {
         box.setPadding(pad, pad, pad, pad);
 
         box.addView(titulo("1. Impressora"));
-        box.addView(texto("Escolha a impressora da POS (normalmente o nome tem PAX ou Printer). Se não aparecer, toque em Abrir Bluetooth, ligue o Bluetooth e pareie a impressora; depois volte e toque em Procurar."));
-        impressoras = new RadioGroup(this);
+        box.addView(texto("Toque no nome da impressora da POS (ex.: Bluetooth Printer). Se não aparecer, toque em Abrir Bluetooth, pareie a impressora, volte e toque em Procurar."));
+        escolhida = texto("");
+        escolhida.setTextSize(17);
+        box.addView(escolhida);
+        impressoras = new LinearLayout(this);
+        impressoras.setOrientation(LinearLayout.VERTICAL);
         box.addView(impressoras);
         LinearLayout botoes = new LinearLayout(this);
         Button procurar = new Button(this);
@@ -57,27 +62,28 @@ public class SettingsActivity extends Activity {
         box.addView(botoes);
 
         box.addView(titulo("2. Tipo de impressão"));
+        box.addView(texto("Se a folha não sair, troque o tipo e teste de novo."));
         RadioGroup modo = new RadioGroup(this);
-        String[] modos = {"Imagem (recomendado)", "Texto + QR da impressora (se a imagem não sair)"};
+        String[] modos = {"Imagem A (recomendado)", "Imagem B", "Texto + QR da impressora"};
         for (int i = 0; i < modos.length; i++) {
             RadioButton rb = new RadioButton(this);
             rb.setText(modos[i]);
             rb.setId(30000 + i);
-            rb.setChecked(Prefs.modo(this) == i);
             modo.addView(rb);
         }
+        modo.check(30000 + Prefs.modo(this));
         modo.setOnCheckedChangeListener((g, id) -> Prefs.setModo(this, id - 30000));
         box.addView(modo);
 
-        box.addView(texto("Largura (modo imagem):"));
+        box.addView(texto("Largura (imagem):"));
         RadioGroup rg = new RadioGroup(this);
         for (int px : LARGURAS) {
             RadioButton rb = new RadioButton(this);
             rb.setText(px + " px" + (px == 384 ? " (padrão, papel 58 mm)" : " (papel 80 mm)"));
             rb.setId(px);
-            rb.setChecked(px == Prefs.largura(this));
             rg.addView(rb);
         }
+        rg.check(Prefs.largura(this) == 576 ? 576 : 384);
         rg.setOnCheckedChangeListener((g, id) -> Prefs.setLargura(this, id));
         box.addView(rg);
 
@@ -89,9 +95,9 @@ public class SettingsActivity extends Activity {
             RadioButton rb = new RadioButton(this);
             rb.setText(nomes[i]);
             rb.setId(10000 + avancos[i]);
-            rb.setChecked(avancos[i] == Prefs.avanco(this));
             av.addView(rb);
         }
+        av.check(10000 + Prefs.avanco(this));
         av.setOnCheckedChangeListener((g, id) -> Prefs.setAvanco(this, id - 10000));
         box.addView(av);
 
@@ -110,9 +116,9 @@ public class SettingsActivity extends Activity {
             RadioButton rb = new RadioButton(this);
             rb.setText(lista[i].replace("https://", ""));
             rb.setId(20000 + i);
-            rb.setChecked(lista[i].equals(Prefs.host(this)));
             hosts.addView(rb);
         }
+        hosts.check(Prefs.host(this).equals(Prefs.HOST_RESERVA) ? 20001 : 20000);
         hosts.setOnCheckedChangeListener((g, id) -> Prefs.setHost(this, lista[id - 20000]));
         box.addView(hosts);
 
@@ -130,37 +136,37 @@ public class SettingsActivity extends Activity {
         sv.setBackgroundColor(Color.WHITE);
         sv.addView(box);
         setContentView(sv);
-        listar();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (impressoras != null) listar();
+        listar();
     }
 
     private void listar() {
-        impressoras.setOnCheckedChangeListener(null);
         impressoras.removeAllViews();
         final List<BluetoothDevice> lista = PrinterA930.pareadas();
         String salvo = Prefs.bt(this);
+        String nomeSalvo = null;
         if (lista.isEmpty()) {
-            TextView v = texto("(nenhuma impressora pareada — toque em Abrir Bluetooth)");
-            impressoras.addView(v);
-            return;
+            impressoras.addView(texto("(nenhuma impressora pareada — toque em Abrir Bluetooth)"));
         }
-        for (int i = 0; i < lista.size(); i++) {
-            BluetoothDevice d = lista.get(i);
-            RadioButton rb = new RadioButton(this);
-            rb.setText(PrinterA930.nome(d) + "  (" + d.getAddress() + ")");
-            rb.setId(40000 + i);
-            impressoras.addView(rb);
-            if (d.getAddress().equalsIgnoreCase(salvo)) rb.setChecked(true);
+        for (final BluetoothDevice d : lista) {
+            Button b = new Button(this);
+            final String nome = PrinterA930.nome(d);
+            boolean marcada = d.getAddress().equalsIgnoreCase(salvo);
+            if (marcada) nomeSalvo = nome;
+            b.setText((marcada ? "✔ " : "") + nome + "  (" + d.getAddress() + ")");
+            b.setOnClickListener(v -> {
+                Prefs.setBt(this, d.getAddress());
+                listar();
+            });
+            impressoras.addView(b);
         }
-        impressoras.setOnCheckedChangeListener((g, id) -> {
-            int i = id - 40000;
-            if (i >= 0 && i < lista.size()) Prefs.setBt(this, lista.get(i).getAddress());
-        });
+        escolhida.setText(nomeSalvo != null
+                ? "Impressora escolhida: " + nomeSalvo
+                : "Nenhuma escolhida (o app usa a que tiver \"Printer\" no nome).");
     }
 
     private String diagnostico() {

@@ -27,7 +27,7 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * Impressora interna da PAX A930 exposta pelo sistema como impressora Bluetooth
- * (app com.pax.paxbtprinter). Envia comandos ESC/POS.
+ * ("Bluetooth Printer", app com.pax.paxbtprinter). Envia comandos ESC/POS.
  */
 public final class PrinterA930 {
 
@@ -128,7 +128,13 @@ public final class PrinterA930 {
     private static final byte[] NORMAL = {0x1B, 0x45, 0, 0x1D, 0x21, 0};
     private static final byte[] DUPLO = {0x1D, 0x21, 0x11};
 
-    private static void raster(ByteArrayOutputStream o, Bitmap bmp) {
+    private static boolean preto(int c) {
+        int lum = (((c >> 16) & 0xFF) * 30 + ((c >> 8) & 0xFF) * 59 + (c & 0xFF) * 11) / 100;
+        return lum < 128 && ((c >>> 24) > 128);
+    }
+
+    /** Imagem tipo B: comando GS v 0 (blocos de linhas). */
+    private static void rasterGsv0(ByteArrayOutputStream o, Bitmap bmp) {
         int w = bmp.getWidth(), h = bmp.getHeight();
         int bpr = (w + 7) / 8;
         int[] px = new int[w];
@@ -143,16 +149,38 @@ public final class PrinterA930 {
                     int b = 0;
                     for (int k = 0; k < 8; k++) {
                         int x = bx * 8 + k;
-                        if (x < w) {
-                            int c = px[x];
-                            int lum = (((c >> 16) & 0xFF) * 30 + ((c >> 8) & 0xFF) * 59 + (c & 0xFF) * 11) / 100;
-                            if (lum < 128 && ((c >>> 24) > 128)) b |= (0x80 >> k);
-                        }
+                        if (x < w && preto(px[x])) b |= (0x80 >> k);
                     }
                     o.write(b);
                 }
             }
         }
+    }
+
+    /** Imagem tipo A: comando ESC * 33 (faixas de 24 pontos), o mais aceito pelas impressoras. */
+    private static void rasterEscStar(ByteArrayOutputStream o, Bitmap bmp) {
+        int w = bmp.getWidth(), h = bmp.getHeight();
+        int[] px = new int[w * 24];
+        o.write(0x1B); o.write(0x33); o.write(24); // espaçamento de linha = 24 pontos
+        for (int y0 = 0; y0 < h; y0 += 24) {
+            int bh = Math.min(24, h - y0);
+            java.util.Arrays.fill(px, 0xFFFFFFFF);
+            bmp.getPixels(px, 0, w, 0, y0, w, bh);
+            o.write(0x1B); o.write(0x2A); o.write(33);
+            o.write(w & 0xFF); o.write((w >> 8) & 0xFF);
+            for (int x = 0; x < w; x++) {
+                for (int k = 0; k < 3; k++) {
+                    int b = 0;
+                    for (int bit = 0; bit < 8; bit++) {
+                        int yy = k * 8 + bit;
+                        if (yy < bh && preto(px[yy * w + x])) b |= (0x80 >> bit);
+                    }
+                    o.write(b);
+                }
+            }
+            o.write('\n');
+        }
+        o.write(0x1B); o.write(0x32); // espaçamento padrão
     }
 
     private static void qrNativo(ByteArrayOutputStream o, String url) {
@@ -261,7 +289,8 @@ public final class PrinterA930 {
     private static byte[] montar(Context ctx, JSONObject ticket, String urlTeste) {
         ByteArrayOutputStream o = new ByteArrayOutputStream();
         w(o, INIT);
-        if (Prefs.modo(ctx) == Prefs.MODO_TEXTO) {
+        int modo = Prefs.modo(ctx);
+        if (modo == Prefs.MODO_TEXTO) {
             if (ticket != null) textoTicket(o, ticket);
             else {
                 w(o, CENTRO); w(o, DUPLO); txt(o, "TESTE"); w(o, NORMAL);
@@ -273,7 +302,8 @@ public final class PrinterA930 {
         } else {
             int largura = Prefs.largura(ctx);
             Bitmap bmp = ticket != null ? ReceiptRenderer.ticket(ticket, largura) : ReceiptRenderer.test(largura, urlTeste);
-            raster(o, bmp);
+            if (modo == Prefs.MODO_IMAGEM_B) rasterGsv0(o, bmp);
+            else rasterEscStar(o, bmp);
             bmp.recycle();
         }
         int linhas = Math.max(2, Prefs.avanco(ctx) / 25);
@@ -286,20 +316,20 @@ public final class PrinterA930 {
         BluetoothSocket s = conectar(d);
         try {
             OutputStream out = s.getOutputStream();
-            for (int i = 0; i < dados.length; i += 1024) {
-                out.write(dados, i, Math.min(1024, dados.length - i));
+            for (int i = 0; i < dados.length; i += 512) {
+                out.write(dados, i, Math.min(512, dados.length - i));
                 out.flush();
-                Thread.sleep(20);
+                Thread.sleep(15);
             }
             // dá tempo da impressora receber tudo antes de fechar a conexão
-            Thread.sleep(Math.min(6000, 800 + dados.length / 20));
+            Thread.sleep(Math.min(8000, 1000 + dados.length / 15));
         } finally {
             try { s.close(); } catch (Throwable ignored) {}
         }
         return new Result(true, "Enviado para " + nome(d) + ".", "PRINTED");
     }
 
-    private static Result rodar(final Context ctx, final Callable<Result> job) {
+    private static Result rodar(final Callable<Result> job) {
         Future<Result> f = trabalho.submit(job);
         try {
             return f.get(LIMITE_SEGUNDOS, TimeUnit.SECONDS);
@@ -316,11 +346,11 @@ public final class PrinterA930 {
 
     /** Imprime o comprovante do servidor. Bloqueia: chamar fora da tela principal. */
     public static synchronized Result printTicket(final Context ctx, final JSONObject t) {
-        return rodar(ctx, () -> enviar(ctx, montar(ctx, t, null)));
+        return rodar(() -> enviar(ctx, montar(ctx, t, null)));
     }
 
     /** Folha de teste com QR. Bloqueia: chamar fora da tela principal. */
     public static synchronized Result printTest(final Context ctx, final String url) {
-        return rodar(ctx, () -> enviar(ctx, montar(ctx, null, url)));
+        return rodar(() -> enviar(ctx, montar(ctx, null, url)));
     }
 }
