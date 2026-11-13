@@ -35,11 +35,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Impressora interna da PAX A930 exposta pelo sistema como impressora Bluetooth
- * ("Bluetooth Printer", app com.pax.paxbtprinter). Envia comandos ESC/POS.
- * Testes na A930: texto funciona; QR próprio da impressora (GS ( k) não sai;
- * o final do comprovante ficava preso e saía no começo do próximo.
- * Agora: conexão fica aberta (como o app DG Vendas) e o final leva várias linhas em branco.
+ * Impressora interna da PAX A930 exposta como impressora Bluetooth ("Bluetooth Printer",
+ * app com.pax.paxbtprinter). Comandos ESC/POS.
+ * Testado: texto OK; QR próprio da impressora não sai; imagens ainda sem sucesso.
+ * O botão de teste imprime 6 variantes de QR, cada uma em impressão separada e numerada,
+ * para descobrir qual a impressora aceita.
  */
 public final class PrinterA930 {
 
@@ -56,12 +56,8 @@ public final class PrinterA930 {
     }
 
     private static final UUID SPP = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-    private static final int LIMITE_SEGUNDOS = 60;
     private static final int COLUNAS = 32;
     private static final ExecutorService trabalho = Executors.newCachedThreadPool();
-
-    private static BluetoothSocket sock;
-    private static String sockEndereco;
 
     private PrinterA930() {}
 
@@ -134,22 +130,6 @@ public final class PrinterA930 {
         throw new Exception("não conectou na impressora " + nome(d) + ": " + (ultimo == null ? "" : ultimo.getMessage()));
     }
 
-    private static void fechar() {
-        try { if (sock != null) sock.close(); } catch (Throwable ignored) {}
-        sock = null;
-        sockEndereco = null;
-    }
-
-    /** Conexão reaproveitada entre impressões, como faz o app DG Vendas. */
-    private static OutputStream saida(BluetoothDevice d) throws Exception {
-        if (sock == null || !sock.isConnected() || !d.getAddress().equals(sockEndereco)) {
-            fechar();
-            sock = conectar(d);
-            sockEndereco = d.getAddress();
-        }
-        return sock.getOutputStream();
-    }
-
     // ---------- montagem ESC/POS ----------
 
     private static final byte[] INIT = {0x1B, 0x40};
@@ -159,20 +139,19 @@ public final class PrinterA930 {
     private static final byte[] NORMAL = {0x1B, 0x45, 0, 0x1D, 0x21, 0};
     private static final byte[] DUPLO = {0x1D, 0x21, 0x11};
 
-    /** Mesmo critério do app DG: claro (R,G,B > 160) = branco, o resto = preto. */
     private static boolean preto(int c) {
         if ((c >>> 24) < 128) return false;
         int r = (c >> 16) & 0xFF, g = (c >> 8) & 0xFF, b = c & 0xFF;
         return !(r > 160 && g > 160 && b > 160);
     }
 
-    /** Imagem pelo comando GS v 0, em blocos de até 240 linhas, cada um seguido de quebra de linha. */
-    private static void rasterGsv0(ByteArrayOutputStream o, Bitmap bmp) {
+    /** GS v 0 em blocos de até "bloco" linhas, cada bloco seguido de quebra de linha. */
+    private static void rasterGsv0(ByteArrayOutputStream o, Bitmap bmp, int bloco) {
         int w = bmp.getWidth(), h = bmp.getHeight();
         int bpr = (w + 7) / 8;
         int[] px = new int[w];
-        for (int y0 = 0; y0 < h; y0 += 240) {
-            int bh = Math.min(240, h - y0);
+        for (int y0 = 0; y0 < h; y0 += bloco) {
+            int bh = Math.min(bloco, h - y0);
             o.write(0x1D); o.write(0x76); o.write(0x30); o.write(0);
             o.write(bpr & 0xFF); o.write((bpr >> 8) & 0xFF);
             o.write(bh & 0xFF); o.write((bh >> 8) & 0xFF);
@@ -191,19 +170,21 @@ public final class PrinterA930 {
         }
     }
 
-    /** Imagem pelo comando ESC * 33 (faixas de 24 pontos). */
-    private static void rasterEscStar(ByteArrayOutputStream o, Bitmap bmp) {
+    /** ESC * m: m=33 (24 pontos, 3 bytes por coluna) ou m=0/1 (8 pontos, 1 byte por coluna). */
+    private static void rasterEscStar(ByteArrayOutputStream o, Bitmap bmp, int m) {
+        int faixa = (m >= 32) ? 24 : 8;
+        int bytesCol = faixa / 8;
         int w = bmp.getWidth(), h = bmp.getHeight();
-        int[] px = new int[w * 24];
-        o.write(0x1B); o.write(0x33); o.write(24);
-        for (int y0 = 0; y0 < h; y0 += 24) {
-            int bh = Math.min(24, h - y0);
+        int[] px = new int[w * faixa];
+        o.write(0x1B); o.write(0x33); o.write(faixa);
+        for (int y0 = 0; y0 < h; y0 += faixa) {
+            int bh = Math.min(faixa, h - y0);
             java.util.Arrays.fill(px, 0xFFFFFFFF);
             bmp.getPixels(px, 0, w, 0, y0, w, bh);
-            o.write(0x1B); o.write(0x2A); o.write(33);
+            o.write(0x1B); o.write(0x2A); o.write(m);
             o.write(w & 0xFF); o.write((w >> 8) & 0xFF);
             for (int x = 0; x < w; x++) {
-                for (int k = 0; k < 3; k++) {
+                for (int k = 0; k < bytesCol; k++) {
                     int b = 0;
                     for (int bit = 0; bit < 8; bit++) {
                         int yy = k * 8 + bit;
@@ -217,25 +198,43 @@ public final class PrinterA930 {
         o.write(0x1B); o.write(0x32);
     }
 
-    /** QR de 250 px (como o app DG), centralizado pela impressora. */
-    private static void qrImagem(ByteArrayOutputStream o, String url, boolean escStar) {
+    private static Bitmap qrBitmap(String url, int lado) throws Exception {
+        Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
+        hints.put(EncodeHintType.MARGIN, 2);
+        hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L);
+        hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
+        BitMatrix m = new QRCodeWriter().encode(url, BarcodeFormat.QR_CODE, lado, lado, hints);
+        Bitmap b = Bitmap.createBitmap(m.getWidth(), m.getHeight(), Bitmap.Config.ARGB_8888);
+        b.eraseColor(Color.WHITE);
+        for (int y = 0; y < m.getHeight(); y++)
+            for (int x = 0; x < m.getWidth(); x++)
+                if (m.get(x, y)) b.setPixel(x, y, Color.BLACK);
+        return b;
+    }
+
+    private static void qrNativo(ByteArrayOutputStream o, String url, int modulo) {
+        byte[] d = url.getBytes(Charset.forName("UTF-8"));
+        int len = d.length + 3;
+        byte[][] cmds = {
+                {0x1D, 0x28, 0x6B, 4, 0, 0x31, 0x41, 0x32, 0},
+                {0x1D, 0x28, 0x6B, 3, 0, 0x31, 0x43, (byte) modulo},
+                {0x1D, 0x28, 0x6B, 3, 0, 0x31, 0x45, 0x31},
+        };
+        for (byte[] c : cmds) o.write(c, 0, c.length);
+        o.write(0x1D); o.write(0x28); o.write(0x6B); o.write(len & 0xFF); o.write((len >> 8) & 0xFF);
+        o.write(0x31); o.write(0x50); o.write(0x30);
+        o.write(d, 0, d.length);
+        byte[] p = {0x1D, 0x28, 0x6B, 3, 0, 0x31, 0x51, 0x30};
+        o.write(p, 0, p.length);
+        o.write('\n');
+    }
+
+    /** QR usado no comprovante (variante 1 por enquanto: 160 px, GS v 0 em blocos de 24 linhas). */
+    private static void qrComprovante(ByteArrayOutputStream o, String url) {
         try {
-            int lado = 250;
-            Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
-            hints.put(EncodeHintType.MARGIN, 2);
-            hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L);
-            hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
-            BitMatrix m = new QRCodeWriter().encode(url, BarcodeFormat.QR_CODE, lado, lado, hints);
-            Bitmap b = Bitmap.createBitmap(m.getWidth(), m.getHeight(), Bitmap.Config.ARGB_8888);
-            b.eraseColor(Color.WHITE);
-            for (int y = 0; y < m.getHeight(); y++) {
-                for (int x = 0; x < m.getWidth(); x++) {
-                    if (m.get(x, y)) b.setPixel(x, y, Color.BLACK);
-                }
-            }
+            Bitmap b = qrBitmap(url, 160);
             w(o, CENTRO);
-            if (escStar) rasterEscStar(o, b);
-            else rasterGsv0(o, b);
+            rasterGsv0(o, b, 24);
             w(o, ESQUERDA);
             b.recycle();
         } catch (Exception e) {
@@ -270,7 +269,12 @@ public final class PrinterA930 {
         return t.length() == 1 ? "0" + t : t;
     }
 
-    private static void textoTicket(ByteArrayOutputStream o, JSONObject t, boolean escStar) {
+    private static void fim(ByteArrayOutputStream o, Context ctx) {
+        int linhas = Math.max(4, Prefs.avanco(ctx) / 20);
+        for (int i = 0; i < linhas; i++) o.write('\n');
+    }
+
+    private static void textoTicket(ByteArrayOutputStream o, JSONObject t) {
         boolean resumo = "BINGO_SUMMARY".equals(t.optString("receiptKind"));
         String linha = "--------------------------------";
         w(o, CENTRO); w(o, NEGRITO);
@@ -324,73 +328,38 @@ public final class PrinterA930 {
         String url = t.optString("validationUrl");
         if (!url.isEmpty()) {
             txt(o, linha);
-            w(o, CENTRO); w(o, NEGRITO); txt(o, "CONFIRA SEU PREMIO"); w(o, NORMAL);
-            txt(o, "Aponte a camera do celular");
-            w(o, ESQUERDA);
-            qrImagem(o, url, escStar);
+            w(o, CENTRO); w(o, NEGRITO); txt(o, "CONFIRA SEU PREMIO"); w(o, NORMAL); w(o, ESQUERDA);
+            txt(o, "");
         }
     }
 
-    private static byte[] montar(Context ctx, JSONObject ticket, String urlTeste) {
-        ByteArrayOutputStream o = new ByteArrayOutputStream();
-        w(o, INIT);
-        int modo = Prefs.modo(ctx);
-        if (modo == Prefs.MODO_TEXTO || modo == Prefs.MODO_TEXTO_B) {
-            boolean escStar = modo == Prefs.MODO_TEXTO_B;
-            if (ticket != null) textoTicket(o, ticket, escStar);
-            else {
-                w(o, CENTRO); w(o, DUPLO); txt(o, "TESTE"); w(o, NORMAL);
-                txt(o, "Bingo POS A930 - texto + QR " + (escStar ? "B" : "A"));
-                txt(o, "O QR abaixo deve abrir o site");
-                w(o, ESQUERDA);
-                qrImagem(o, urlTeste, escStar);
-            }
-        } else {
-            int largura = Prefs.largura(ctx);
-            Bitmap bmp = ticket != null ? ReceiptRenderer.ticket(ticket, largura) : ReceiptRenderer.test(largura, urlTeste);
-            if (modo == Prefs.MODO_IMAGEM_B) rasterGsv0(o, bmp);
-            else rasterEscStar(o, bmp);
-            bmp.recycle();
-        }
-        // final igual ao app DG: várias linhas em branco + retorno, para a impressora soltar tudo
-        int linhas = Math.max(4, Prefs.avanco(ctx) / 20);
-        for (int i = 0; i < linhas; i++) o.write('\n');
-        o.write('\r'); o.write('\n');
-        o.write(0x1C); o.write(0x2E);
-        return o.toByteArray();
-    }
-
-    private static void escrever(OutputStream out, byte[] dados) throws Exception {
-        for (int i = 0; i < dados.length; i += 512) {
-            out.write(dados, i, Math.min(512, dados.length - i));
-            out.flush();
-            Thread.sleep(15);
-        }
-    }
-
-    private static Result enviar(Context ctx, byte[] dados) throws Exception {
+    /** Envia um trabalho numa conexão própria. "lento" = pedaços pequenos com pausa maior. */
+    private static void enviar(Context ctx, byte[] dados, boolean lento) throws Exception {
         BluetoothDevice d = escolher(ctx);
+        BluetoothSocket s = conectar(d);
         try {
-            escrever(saida(d), dados);
-        } catch (Exception primeira) {
-            // conexão antiga caiu: reconecta e tenta mais uma vez
-            fechar();
-            escrever(saida(d), dados);
+            OutputStream out = s.getOutputStream();
+            int pedaco = lento ? 128 : 512;
+            int pausa = lento ? 40 : 15;
+            for (int i = 0; i < dados.length; i += pedaco) {
+                out.write(dados, i, Math.min(pedaco, dados.length - i));
+                out.flush();
+                Thread.sleep(pausa);
+            }
+            Thread.sleep(Math.min(9000, 2000 + dados.length / 8));
+        } finally {
+            try { s.close(); } catch (Throwable ignored) {}
         }
-        Thread.sleep(500);
-        return new Result(true, "Enviado para " + nome(d) + ".", "PRINTED");
     }
 
-    private static Result rodar(final Callable<Result> job) {
+    private static Result rodar(final Callable<Result> job, int limite) {
         Future<Result> f = trabalho.submit(job);
         try {
-            return f.get(LIMITE_SEGUNDOS, TimeUnit.SECONDS);
+            return f.get(limite, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             f.cancel(true);
-            fechar();
-            return new Result(false, "A impressora não respondeu em " + LIMITE_SEGUNDOS + " s.", "PRINTER_TIMEOUT");
+            return new Result(false, "A impressora não respondeu a tempo.", "PRINTER_TIMEOUT");
         } catch (Throwable e) {
-            fechar();
             Throwable c = e;
             while (c.getCause() != null && c.getCause() != c) c = c.getCause();
             return new Result(false, "Não imprimiu: "
@@ -398,13 +367,69 @@ public final class PrinterA930 {
         }
     }
 
-    /** Imprime o comprovante do servidor. Bloqueia: chamar fora da tela principal. */
+    /**
+     * Comprovante: texto (que já funciona) numa impressão e o QR numa segunda impressão separada,
+     * para que um QR recusado nunca apague o comprovante.
+     */
     public static synchronized Result printTicket(final Context ctx, final JSONObject t) {
-        return rodar(() -> enviar(ctx, montar(ctx, t, null)));
+        return rodar(() -> {
+            ByteArrayOutputStream o = new ByteArrayOutputStream();
+            w(o, INIT);
+            textoTicket(o, t);
+            String url = t.optString("validationUrl");
+            if (url.isEmpty()) fim(o, ctx);
+            enviar(ctx, o.toByteArray(), false);
+            if (!url.isEmpty()) {
+                ByteArrayOutputStream q = new ByteArrayOutputStream();
+                qrComprovante(q, url);
+                fim(q, ctx);
+                try { enviar(ctx, q.toByteArray(), true); } catch (Exception ignored) {}
+            }
+            return new Result(true, "Impresso.", "PRINTED");
+        }, 90);
     }
 
-    /** Folha de teste com QR. Bloqueia: chamar fora da tela principal. */
+    /** Teste completo: 6 variantes de QR, cada uma numa impressão separada e numerada. */
     public static synchronized Result printTest(final Context ctx, final String url) {
-        return rodar(() -> enviar(ctx, montar(ctx, null, url)));
+        return rodar(() -> {
+            String[] nomes = {
+                    "1: imagem 160px, blocos de 24 linhas, lento",
+                    "2: imagem 250px, bloco unico, lento",
+                    "3: imagem 160px, ESC * 8 pontos, lento",
+                    "4: imagem 160px, ESC * 24 pontos, lento",
+                    "5: imagem 96px, blocos de 8 linhas, lento",
+                    "6: QR da impressora, modulo 3 (igual DG)",
+            };
+            StringBuilder falhas = new StringBuilder();
+            for (int v = 0; v < nomes.length; v++) {
+                ByteArrayOutputStream o = new ByteArrayOutputStream();
+                w(o, INIT);
+                txt(o, "=== TESTE QR " + nomes[v] + " ===");
+                w(o, CENTRO);
+                try {
+                    switch (v) {
+                        case 0: { Bitmap b = qrBitmap(url, 160); rasterGsv0(o, b, 24); b.recycle(); break; }
+                        case 1: { Bitmap b = qrBitmap(url, 250); rasterGsv0(o, b, 250); b.recycle(); break; }
+                        case 2: { Bitmap b = qrBitmap(url, 160); rasterEscStar(o, b, 1); b.recycle(); break; }
+                        case 3: { Bitmap b = qrBitmap(url, 160); rasterEscStar(o, b, 33); b.recycle(); break; }
+                        case 4: { Bitmap b = qrBitmap(url, 96); rasterGsv0(o, b, 8); b.recycle(); break; }
+                        default: qrNativo(o, url, 3);
+                    }
+                } catch (Exception e) {
+                    txt(o, "erro: " + e.getMessage());
+                }
+                w(o, ESQUERDA);
+                txt(o, "=== FIM DO TESTE " + (v + 1) + " ===");
+                for (int i = 0; i < 4; i++) o.write('\n');
+                try {
+                    enviar(ctx, o.toByteArray(), true);
+                } catch (Exception e) {
+                    falhas.append(" ").append(v + 1);
+                }
+                Thread.sleep(2500);
+            }
+            return new Result(true, "6 testes enviados" + (falhas.length() > 0 ? " (falha ao enviar:" + falhas + ")" : "")
+                    + ". Veja quais números saíram com QR.", "PRINTED");
+        }, 170);
     }
 }
