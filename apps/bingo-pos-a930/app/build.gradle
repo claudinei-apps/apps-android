@@ -15,7 +15,7 @@ android {
         targetSdk 34
         // o celular aceita a atualização por cima só se o número subir
         versionCode Integer.parseInt(numeroBuild)
-        versionName '2.1.' + numeroBuild + '-xcheng'
+        versionName '2.2.' + numeroBuild + '-bt'
     }
 
     // chave de DEBUG fixa, commitada de propósito (não é segredo: só serve para testes)
@@ -43,6 +43,6 @@ android {
 dependencies {
     // gera o QR Code dentro do aparelho
     implementation 'com.google.zxing:core:3.3.3'
-    // A impressão usa o serviço do sistema com.xcheng.printerservice (sem kit externo).
-    // O kit PlugPag da PagBank foi testado e não serve: esta A930 não tem os serviços PagBank.
+    // Impressão: impressora interna da PAX exposta como Bluetooth (com.pax.paxbtprinter), comandos ESC/POS.
+    // Já testados e descartados nesta A930: kit PlugPag da PagBank (não há serviços PagBank) e com.xcheng.printerservice.
 }

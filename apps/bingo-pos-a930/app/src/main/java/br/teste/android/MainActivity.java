@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
-import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -165,9 +164,7 @@ public class MainActivity extends Activity {
                 evento(id, "printing", "Imprimindo...", "PRINTING");
                 PrinterA930.Result r;
                 try {
-                    Bitmap bmp = ReceiptRenderer.ticket(t, Prefs.largura(MainActivity.this));
-                    r = PrinterA930.print(MainActivity.this, bmp);
-                    bmp.recycle();
+                    r = PrinterA930.printTicket(MainActivity.this, t);
                 } catch (Throwable e) {
                     r = new PrinterA930.Result(false, "Erro ao montar o comprovante: " + e.getMessage(), "RENDER");
                 }
