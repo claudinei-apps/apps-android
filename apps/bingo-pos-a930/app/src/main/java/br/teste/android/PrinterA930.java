@@ -1,17 +1,24 @@
 package br.teste.android;
 
-import android.content.ComponentName;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
 import android.graphics.Bitmap;
-import android.os.Binder;
-import android.os.IBinder;
-import android.os.Parcel;
-import android.os.RemoteException;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
+import java.lang.reflect.Method;
+import java.nio.charset.Charset;
+import java.text.Normalizer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -19,9 +26,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Impressora interna da POS pelo serviço do sistema "com.xcheng.printerservice"
- * (o mesmo usado pelo app que já imprime QR Code nessa A930).
- * A interface foi reproduzida à mão (códigos de chamada iguais aos do serviço).
+ * Impressora interna da PAX A930 exposta pelo sistema como impressora Bluetooth
+ * (app com.pax.paxbtprinter). Envia comandos ESC/POS.
  */
 public final class PrinterA930 {
 
@@ -37,186 +43,284 @@ public final class PrinterA930 {
         }
     }
 
-    static final String PKG = "com.xcheng.printerservice";
-    static final String DESC = "com.xcheng.printerservice.IPrinterService";
-    static final String DESC_CB = "com.xcheng.printerservice.IPrinterCallback";
-
-    // códigos de chamada do serviço
-    private static final int TX_FIRMWARE = 2;
-    private static final int TX_INIT = 4;
-    private static final int TX_WRAP = 6;
-    private static final int TX_BITMAP = 10;
-
+    private static final UUID SPP = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     private static final int LIMITE_SEGUNDOS = 60;
-    private static final int FATIA = 240; // linhas por pedaço de imagem
-
-    private static volatile IBinder remote;
-    private static ServiceConnection conn;
+    private static final int COLUNAS = 32;
     private static final ExecutorService trabalho = Executors.newCachedThreadPool();
 
     private PrinterA930() {}
 
-    private interface Escrita { void em(Parcel p); }
+    // ---------- escolha da impressora ----------
 
-    /** Recebe o retorno da impressora (fim ou erro). */
-    private static final class Retorno extends Binder {
-        final CountDownLatch fim = new CountDownLatch(1);
-        volatile String erro;
-
-        @Override
-        protected boolean onTransact(int code, Parcel data, Parcel reply, int flags) throws RemoteException {
-            if (code == INTERFACE_TRANSACTION) {
-                if (reply != null) reply.writeString(DESC_CB);
-                return true;
-            }
-            try {
-                data.enforceInterface(DESC_CB);
-            } catch (Throwable ignored) {
-            }
-            switch (code) {
-                case 1: { // onException(int, String)
-                    int c = data.readInt();
-                    String m = data.readString();
-                    erro = m + " (" + c + ")";
-                    fim.countDown();
-                    return true;
-                }
-                case 4: // onComplete
-                    fim.countDown();
-                    return true;
-                case 2: // onLength
-                case 3: // onRealLength
-                    return true;
-                default:
-                    return super.onTransact(code, data, reply, flags);
-            }
-        }
-
-        boolean esperar(int segundos) {
-            try {
-                return fim.await(segundos, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                return false;
-            }
-        }
-    }
-
-    private static synchronized IBinder conectar(Context ctx) throws Exception {
-        IBinder b = remote;
-        if (b != null && b.isBinderAlive()) return b;
-        final CountDownLatch latch = new CountDownLatch(1);
-        final IBinder[] caixa = new IBinder[1];
-        if (conn != null) {
-            try { ctx.getApplicationContext().unbindService(conn); } catch (Throwable ignored) {}
-        }
-        conn = new ServiceConnection() {
-            @Override
-            public void onServiceConnected(ComponentName name, IBinder service) {
-                caixa[0] = service;
-                remote = service;
-                latch.countDown();
-            }
-
-            @Override
-            public void onServiceDisconnected(ComponentName name) {
-                remote = null;
-            }
-        };
-        Intent i = new Intent(DESC);
-        i.setPackage(PKG);
-        boolean ok = ctx.getApplicationContext().bindService(i, conn, Context.BIND_AUTO_CREATE);
-        if (!ok) throw new Exception("serviço de impressão (" + PKG + ") não existe nesta POS");
-        if (!latch.await(8, TimeUnit.SECONDS)) throw new Exception("serviço de impressão não respondeu ao conectar");
-        return caixa[0];
-    }
-
-    private static void chamar(IBinder b, int code, Escrita w) throws RemoteException {
-        Parcel d = Parcel.obtain();
-        Parcel r = Parcel.obtain();
+    public static List<BluetoothDevice> pareadas() {
+        List<BluetoothDevice> out = new ArrayList<>();
         try {
-            d.writeInterfaceToken(DESC);
-            if (w != null) w.em(d);
-            b.transact(code, d, r, 0);
-            r.readException();
-        } finally {
-            d.recycle();
-            r.recycle();
+            BluetoothAdapter a = BluetoothAdapter.getDefaultAdapter();
+            if (a == null) return out;
+            Set<BluetoothDevice> s = a.getBondedDevices();
+            if (s != null) out.addAll(s);
+        } catch (Throwable ignored) {
+        }
+        return out;
+    }
+
+    public static String nome(BluetoothDevice d) {
+        try {
+            String n = d.getName();
+            return n == null ? d.getAddress() : n;
+        } catch (Throwable e) {
+            return d.getAddress();
         }
     }
 
-    private static Result fazer(Context ctx, Bitmap bmp) throws Exception {
-        IBinder b = conectar(ctx);
-
-        final Retorno ini = new Retorno();
-        chamar(b, TX_INIT, p -> p.writeStrongBinder(ini));
-        ini.esperar(3);
-
-        int altura = bmp.getHeight();
-        for (int y = 0; y < altura; y += FATIA) {
-            int h = Math.min(FATIA, altura - y);
-            final Bitmap parte = Bitmap.createBitmap(bmp, 0, y, bmp.getWidth(), h);
-            final Retorno rt = new Retorno();
-            chamar(b, TX_BITMAP, p -> {
-                p.writeInt(1);
-                parte.writeToParcel(p, 0);
-                p.writeStrongBinder(rt);
-            });
-            rt.esperar(10);
-            if (parte != bmp) parte.recycle();
-            if (rt.erro != null) return new Result(false, "A impressora recusou: " + rt.erro, "PRINTER_ERROR");
-        }
-
-        final int linhas = Math.max(1, Prefs.avanco(ctx) / 25);
-        final Retorno fim = new Retorno();
-        chamar(b, TX_WRAP, p -> {
-            p.writeInt(linhas);
-            p.writeStrongBinder(fim);
-        });
-        fim.esperar(5);
-        if (fim.erro != null) return new Result(false, "A impressora recusou: " + fim.erro, "PRINTER_ERROR");
-        return new Result(true, "Impresso.", "PRINTED");
+    private static boolean pareceImpressora(BluetoothDevice d) {
+        String n = nome(d).toLowerCase();
+        return n.contains("print") || n.contains("pax") || n.contains("inner") || n.contains("pos")
+                || n.contains("impress") || n.contains("pt-") || n.contains("mpt");
     }
 
-    /** Bloqueia até terminar (no máximo 60 s): chamar fora da tela principal. */
-    public static synchronized Result print(final Context context, final Bitmap bmp) {
-        Future<Result> f = trabalho.submit(new Callable<Result>() {
-            @Override
-            public Result call() throws Exception {
-                return fazer(context, bmp);
+    private static BluetoothDevice escolher(Context ctx) throws Exception {
+        BluetoothAdapter a = BluetoothAdapter.getDefaultAdapter();
+        if (a == null) throw new Exception("esta POS não tem Bluetooth");
+        if (!a.isEnabled()) {
+            try { a.enable(); } catch (Throwable ignored) {}
+            for (int i = 0; i < 30 && !a.isEnabled(); i++) Thread.sleep(200);
+            if (!a.isEnabled()) throw new Exception("ligue o Bluetooth da POS");
+        }
+        List<BluetoothDevice> lista = pareadas();
+        String salvo = Prefs.bt(ctx);
+        for (BluetoothDevice d : lista) if (d.getAddress().equalsIgnoreCase(salvo)) return d;
+        for (BluetoothDevice d : lista) if (pareceImpressora(d)) return d;
+        if (lista.size() == 1) return lista.get(0);
+        throw new Exception(lista.isEmpty()
+                ? "nenhuma impressora pareada. Em Configurar impressora, toque em 'Abrir Bluetooth' e pareie a impressora da POS"
+                : "escolha a impressora em Configurar impressora");
+    }
+
+    private static BluetoothSocket conectar(BluetoothDevice d) throws Exception {
+        try { BluetoothAdapter.getDefaultAdapter().cancelDiscovery(); } catch (Throwable ignored) {}
+        Exception ultimo = null;
+        try {
+            BluetoothSocket s = d.createRfcommSocketToServiceRecord(SPP);
+            s.connect();
+            return s;
+        } catch (Exception e) { ultimo = e; }
+        try {
+            BluetoothSocket s = d.createInsecureRfcommSocketToServiceRecord(SPP);
+            s.connect();
+            return s;
+        } catch (Exception e) { ultimo = e; }
+        try {
+            Method m = d.getClass().getMethod("createRfcommSocket", int.class);
+            BluetoothSocket s = (BluetoothSocket) m.invoke(d, 1);
+            s.connect();
+            return s;
+        } catch (Exception e) { ultimo = e; }
+        throw new Exception("não conectou na impressora " + nome(d) + ": " + (ultimo == null ? "" : ultimo.getMessage()));
+    }
+
+    // ---------- montagem ESC/POS ----------
+
+    private static final byte[] INIT = {0x1B, 0x40};
+    private static final byte[] CENTRO = {0x1B, 0x61, 1};
+    private static final byte[] ESQUERDA = {0x1B, 0x61, 0};
+    private static final byte[] NEGRITO = {0x1B, 0x45, 1};
+    private static final byte[] NORMAL = {0x1B, 0x45, 0, 0x1D, 0x21, 0};
+    private static final byte[] DUPLO = {0x1D, 0x21, 0x11};
+
+    private static void raster(ByteArrayOutputStream o, Bitmap bmp) {
+        int w = bmp.getWidth(), h = bmp.getHeight();
+        int bpr = (w + 7) / 8;
+        int[] px = new int[w];
+        for (int y0 = 0; y0 < h; y0 += 64) {
+            int bh = Math.min(64, h - y0);
+            o.write(0x1D); o.write(0x76); o.write(0x30); o.write(0);
+            o.write(bpr & 0xFF); o.write((bpr >> 8) & 0xFF);
+            o.write(bh & 0xFF); o.write((bh >> 8) & 0xFF);
+            for (int y = y0; y < y0 + bh; y++) {
+                bmp.getPixels(px, 0, w, 0, y, w, 1);
+                for (int bx = 0; bx < bpr; bx++) {
+                    int b = 0;
+                    for (int k = 0; k < 8; k++) {
+                        int x = bx * 8 + k;
+                        if (x < w) {
+                            int c = px[x];
+                            int lum = (((c >> 16) & 0xFF) * 30 + ((c >> 8) & 0xFF) * 59 + (c & 0xFF) * 11) / 100;
+                            if (lum < 128 && ((c >>> 24) > 128)) b |= (0x80 >> k);
+                        }
+                    }
+                    o.write(b);
+                }
             }
-        });
+        }
+    }
+
+    private static void qrNativo(ByteArrayOutputStream o, String url) {
+        byte[] d = url.getBytes(Charset.forName("UTF-8"));
+        int len = d.length + 3;
+        o.write(CENTRO, 0, 3);
+        byte[][] cmds = {
+                {0x1D, 0x28, 0x6B, 4, 0, 0x31, 0x41, 0x32, 0},
+                {0x1D, 0x28, 0x6B, 3, 0, 0x31, 0x43, 6},
+                {0x1D, 0x28, 0x6B, 3, 0, 0x31, 0x45, 0x31},
+        };
+        for (byte[] c : cmds) o.write(c, 0, c.length);
+        o.write(0x1D); o.write(0x28); o.write(0x6B); o.write(len & 0xFF); o.write((len >> 8) & 0xFF);
+        o.write(0x31); o.write(0x50); o.write(0x30);
+        o.write(d, 0, d.length);
+        byte[] p = {0x1D, 0x28, 0x6B, 3, 0, 0x31, 0x51, 0x30};
+        o.write(p, 0, p.length);
+        o.write('\n');
+        o.write(ESQUERDA, 0, 3);
+    }
+
+    private static String ascii(String s) {
+        if (s == null) return "";
+        String n = Normalizer.normalize(s, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        return n.replaceAll("[^\\x20-\\x7E\\n]", "");
+    }
+
+    private static void txt(ByteArrayOutputStream o, String s) {
+        byte[] b = (ascii(s) + "\n").getBytes(Charset.forName("US-ASCII"));
+        o.write(b, 0, b.length);
+    }
+
+    private static void par(ByteArrayOutputStream o, String a, String b) {
+        a = ascii(a); b = ascii(b);
+        int sp = Math.max(1, COLUNAS - a.length() - b.length());
+        StringBuilder sb = new StringBuilder(a);
+        for (int i = 0; i < sp; i++) sb.append(' ');
+        txt(o, sb.append(b).toString());
+    }
+
+    private static void w(ByteArrayOutputStream o, byte[] b) { o.write(b, 0, b.length); }
+
+    private static String dois(String v) {
+        String t = v == null ? "" : v.trim();
+        if (t.startsWith("C")) t = t.substring(1);
+        return t.length() == 1 ? "0" + t : t;
+    }
+
+    private static void textoTicket(ByteArrayOutputStream o, JSONObject t) {
+        boolean resumo = "BINGO_SUMMARY".equals(t.optString("receiptKind"));
+        String linha = "--------------------------------";
+        w(o, CENTRO); w(o, NEGRITO);
+        txt(o, t.optString("tenant"));
+        w(o, NORMAL);
+        txt(o, t.optString("salePoint", t.optString("point")));
+        txt(o, linha);
+        w(o, DUPLO); txt(o, "BINGO 90"); w(o, NORMAL);
+        w(o, NEGRITO);
+        txt(o, resumo ? t.optInt("quantity") + " CARTELAS - " + t.optString("ticketId") : "CARTELA " + t.optString("ticketId"));
+        w(o, NORMAL);
+        w(o, ESQUERDA);
+        par(o, "SORTEIO #" + t.optString("round"), t.optString("drawDate"));
+        txt(o, linha);
+        JSONArray arr = resumo ? t.optJSONArray("cardIds") : t.optJSONArray("numbers");
+        if (arr != null) {
+            int cols = resumo ? 3 : 5;
+            w(o, CENTRO); w(o, resumo ? NEGRITO : DUPLO);
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < arr.length(); i++) {
+                sb.append(dois(arr.optString(i)));
+                if ((i + 1) % cols == 0 || i == arr.length() - 1) { txt(o, sb.toString()); sb.setLength(0); }
+                else sb.append(resumo ? "   " : " ");
+            }
+            w(o, NORMAL); w(o, ESQUERDA);
+        }
+        txt(o, linha);
+        w(o, NEGRITO); par(o, "VALOR", t.optString("bet")); w(o, NORMAL);
+        par(o, "PAGAMENTO", t.optString("paymentMethod"));
+        par(o, "SITUACAO", t.optString("statusText"));
+        if (t.optBoolean("isReprint")) {
+            w(o, CENTRO); w(o, NEGRITO);
+            txt(o, "REIMPRESSAO - COPIA " + t.optInt("copyNumber"));
+            w(o, NORMAL);
+            txt(o, t.optString("printLabel"));
+            w(o, ESQUERDA);
+        }
+        JSONArray pr = t.optJSONArray("paytablePrizes");
+        if (pr != null && pr.length() > 0) {
+            txt(o, linha);
+            w(o, CENTRO); txt(o, t.optString("paytableTitle", "PREMIOS")); w(o, ESQUERDA);
+            for (int i = 0; i < pr.length(); i++) {
+                JSONObject p = pr.optJSONObject(i);
+                if (p == null) continue;
+                int m = p.optInt("matches");
+                par(o, m == 4 ? "QUADRA" : m == 5 ? "QUINA" : m == 15 ? "CARTELA CHEIA" : m + " ACERTOS", p.optString("amount"));
+            }
+        }
+        String url = t.optString("validationUrl");
+        if (!url.isEmpty()) {
+            txt(o, linha);
+            w(o, CENTRO); w(o, NEGRITO); txt(o, "CONFIRA SEU PREMIO"); w(o, NORMAL); w(o, ESQUERDA);
+            qrNativo(o, url);
+        }
+    }
+
+    private static byte[] montar(Context ctx, JSONObject ticket, String urlTeste) {
+        ByteArrayOutputStream o = new ByteArrayOutputStream();
+        w(o, INIT);
+        if (Prefs.modo(ctx) == Prefs.MODO_TEXTO) {
+            if (ticket != null) textoTicket(o, ticket);
+            else {
+                w(o, CENTRO); w(o, DUPLO); txt(o, "TESTE"); w(o, NORMAL);
+                txt(o, "Bingo POS A930 - modo texto");
+                txt(o, "O QR abaixo deve abrir o site");
+                w(o, ESQUERDA);
+                qrNativo(o, urlTeste);
+            }
+        } else {
+            int largura = Prefs.largura(ctx);
+            Bitmap bmp = ticket != null ? ReceiptRenderer.ticket(ticket, largura) : ReceiptRenderer.test(largura, urlTeste);
+            raster(o, bmp);
+            bmp.recycle();
+        }
+        int linhas = Math.max(2, Prefs.avanco(ctx) / 25);
+        o.write(0x1B); o.write(0x64); o.write(linhas);
+        return o.toByteArray();
+    }
+
+    private static Result enviar(Context ctx, byte[] dados) throws Exception {
+        BluetoothDevice d = escolher(ctx);
+        BluetoothSocket s = conectar(d);
+        try {
+            OutputStream out = s.getOutputStream();
+            for (int i = 0; i < dados.length; i += 1024) {
+                out.write(dados, i, Math.min(1024, dados.length - i));
+                out.flush();
+                Thread.sleep(20);
+            }
+            // dá tempo da impressora receber tudo antes de fechar a conexão
+            Thread.sleep(Math.min(6000, 800 + dados.length / 20));
+        } finally {
+            try { s.close(); } catch (Throwable ignored) {}
+        }
+        return new Result(true, "Enviado para " + nome(d) + ".", "PRINTED");
+    }
+
+    private static Result rodar(final Context ctx, final Callable<Result> job) {
+        Future<Result> f = trabalho.submit(job);
         try {
             return f.get(LIMITE_SEGUNDOS, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             f.cancel(true);
-            remote = null;
             return new Result(false, "A impressora não respondeu em " + LIMITE_SEGUNDOS + " s.", "PRINTER_TIMEOUT");
         } catch (Throwable e) {
-            remote = null;
             Throwable c = e;
             while (c.getCause() != null && c.getCause() != c) c = c.getCause();
-            return new Result(false, "Impressora indisponível: "
+            return new Result(false, "Não imprimiu: "
                     + (c.getMessage() == null ? c.getClass().getSimpleName() : c.getMessage()), "PRINTER_UNAVAILABLE");
         }
     }
 
-    /** Versão do firmware da impressora (para a tela de informações). */
-    public static String firmware(Context ctx) {
-        try {
-            IBinder b = conectar(ctx);
-            Parcel d = Parcel.obtain();
-            Parcel r = Parcel.obtain();
-            try {
-                d.writeInterfaceToken(DESC);
-                b.transact(TX_FIRMWARE, d, r, 0);
-                r.readException();
-                return r.readString();
-            } finally {
-                d.recycle();
-                r.recycle();
-            }
-        } catch (Throwable e) {
-            return "indisponível (" + e.getMessage() + ")";
-        }
+    /** Imprime o comprovante do servidor. Bloqueia: chamar fora da tela principal. */
+    public static synchronized Result printTicket(final Context ctx, final JSONObject t) {
+        return rodar(ctx, () -> enviar(ctx, montar(ctx, t, null)));
+    }
+
+    /** Folha de teste com QR. Bloqueia: chamar fora da tela principal. */
+    public static synchronized Result printTest(final Context ctx, final String url) {
+        return rodar(ctx, () -> enviar(ctx, montar(ctx, null, url)));
     }
 }
