@@ -37,8 +37,9 @@ import java.util.concurrent.TimeoutException;
 /**
  * Impressora interna da PAX A930 exposta pelo sistema como impressora Bluetooth
  * ("Bluetooth Printer", app com.pax.paxbtprinter). Envia comandos ESC/POS.
- * Teste na A930: texto funciona; o comando de QR próprio da impressora não é aceito,
- * por isso o QR é desenhado pelo app e enviado como imagem.
+ * Testes na A930: texto funciona; QR próprio da impressora (GS ( k) não sai.
+ * O QR é enviado do mesmo jeito que o app DG Vendas (que imprime QR nessa máquina):
+ * imagem de 250 px, UM bloco GS v 0, centralizado e seguido de quebra de linha.
  */
 public final class PrinterA930 {
 
@@ -139,18 +140,20 @@ public final class PrinterA930 {
     private static final byte[] NORMAL = {0x1B, 0x45, 0, 0x1D, 0x21, 0};
     private static final byte[] DUPLO = {0x1D, 0x21, 0x11};
 
+    /** Mesmo critério do app DG: claro (R,G,B > 160) = branco, o resto = preto. */
     private static boolean preto(int c) {
-        int lum = (((c >> 16) & 0xFF) * 30 + ((c >> 8) & 0xFF) * 59 + (c & 0xFF) * 11) / 100;
-        return lum < 128 && ((c >>> 24) > 128);
+        if ((c >>> 24) < 128) return false;
+        int r = (c >> 16) & 0xFF, g = (c >> 8) & 0xFF, b = c & 0xFF;
+        return !(r > 160 && g > 160 && b > 160);
     }
 
-    /** Imagem tipo B: comando GS v 0 (blocos de linhas). */
+    /** Imagem pelo comando GS v 0, em blocos de até 240 linhas, cada um seguido de quebra de linha. */
     private static void rasterGsv0(ByteArrayOutputStream o, Bitmap bmp) {
         int w = bmp.getWidth(), h = bmp.getHeight();
         int bpr = (w + 7) / 8;
         int[] px = new int[w];
-        for (int y0 = 0; y0 < h; y0 += 64) {
-            int bh = Math.min(64, h - y0);
+        for (int y0 = 0; y0 < h; y0 += 240) {
+            int bh = Math.min(240, h - y0);
             o.write(0x1D); o.write(0x76); o.write(0x30); o.write(0);
             o.write(bpr & 0xFF); o.write((bpr >> 8) & 0xFF);
             o.write(bh & 0xFF); o.write((bh >> 8) & 0xFF);
@@ -165,14 +168,15 @@ public final class PrinterA930 {
                     o.write(b);
                 }
             }
+            o.write('\n');
         }
     }
 
-    /** Imagem tipo A: comando ESC * 33 (faixas de 24 pontos). */
+    /** Imagem pelo comando ESC * 33 (faixas de 24 pontos). */
     private static void rasterEscStar(ByteArrayOutputStream o, Bitmap bmp) {
         int w = bmp.getWidth(), h = bmp.getHeight();
         int[] px = new int[w * 24];
-        o.write(0x1B); o.write(0x33); o.write(24); // espaçamento de linha = 24 pontos
+        o.write(0x1B); o.write(0x33); o.write(24);
         for (int y0 = 0; y0 < h; y0 += 24) {
             int bh = Math.min(24, h - y0);
             java.util.Arrays.fill(px, 0xFFFFFFFF);
@@ -191,30 +195,29 @@ public final class PrinterA930 {
             }
             o.write('\n');
         }
-        o.write(0x1B); o.write(0x32); // espaçamento padrão
+        o.write(0x1B); o.write(0x32);
     }
 
-    /** QR desenhado pelo app, centralizado numa faixa de 384 pontos, enviado como imagem. */
-    private static void qrImagem(ByteArrayOutputStream o, String url, boolean tipoB) {
+    /** QR de 250 px (como o app DG), centralizado pela impressora. */
+    private static void qrImagem(ByteArrayOutputStream o, String url, boolean escStar) {
         try {
-            int largura = 384;
-            int lado = 264;
+            int lado = 250;
             Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
-            hints.put(EncodeHintType.MARGIN, 1);
-            hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M);
+            hints.put(EncodeHintType.MARGIN, 2);
+            hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L);
             hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
             BitMatrix m = new QRCodeWriter().encode(url, BarcodeFormat.QR_CODE, lado, lado, hints);
-            Bitmap b = Bitmap.createBitmap(largura, m.getHeight(), Bitmap.Config.ARGB_8888);
+            Bitmap b = Bitmap.createBitmap(m.getWidth(), m.getHeight(), Bitmap.Config.ARGB_8888);
             b.eraseColor(Color.WHITE);
-            int x0 = Math.max(0, (largura - m.getWidth()) / 2);
             for (int y = 0; y < m.getHeight(); y++) {
-                for (int x = 0; x < m.getWidth() && x0 + x < largura; x++) {
-                    if (m.get(x, y)) b.setPixel(x0 + x, y, Color.BLACK);
+                for (int x = 0; x < m.getWidth(); x++) {
+                    if (m.get(x, y)) b.setPixel(x, y, Color.BLACK);
                 }
             }
+            w(o, CENTRO);
+            if (escStar) rasterEscStar(o, b);
+            else rasterGsv0(o, b);
             w(o, ESQUERDA);
-            if (tipoB) rasterGsv0(o, b);
-            else rasterEscStar(o, b);
             b.recycle();
         } catch (Exception e) {
             txt(o, url);
@@ -248,7 +251,7 @@ public final class PrinterA930 {
         return t.length() == 1 ? "0" + t : t;
     }
 
-    private static void textoTicket(ByteArrayOutputStream o, JSONObject t, boolean tipoB) {
+    private static void textoTicket(ByteArrayOutputStream o, JSONObject t, boolean escStar) {
         boolean resumo = "BINGO_SUMMARY".equals(t.optString("receiptKind"));
         String linha = "--------------------------------";
         w(o, CENTRO); w(o, NEGRITO);
@@ -306,7 +309,7 @@ public final class PrinterA930 {
             w(o, CENTRO); w(o, NEGRITO); txt(o, "CONFIRA SEU PREMIO"); w(o, NORMAL);
             txt(o, "Aponte a camera do celular");
             w(o, ESQUERDA);
-            qrImagem(o, url, tipoB);
+            qrImagem(o, url, escStar);
         }
     }
 
@@ -315,14 +318,14 @@ public final class PrinterA930 {
         w(o, INIT);
         int modo = Prefs.modo(ctx);
         if (modo == Prefs.MODO_TEXTO || modo == Prefs.MODO_TEXTO_B) {
-            boolean tipoB = modo == Prefs.MODO_TEXTO_B;
-            if (ticket != null) textoTicket(o, ticket, tipoB);
+            boolean escStar = modo == Prefs.MODO_TEXTO_B;
+            if (ticket != null) textoTicket(o, ticket, escStar);
             else {
                 w(o, CENTRO); w(o, DUPLO); txt(o, "TESTE"); w(o, NORMAL);
-                txt(o, "Bingo POS A930 - texto + QR " + (tipoB ? "B" : "A"));
+                txt(o, "Bingo POS A930 - texto + QR " + (escStar ? "B" : "A"));
                 txt(o, "O QR abaixo deve abrir o site");
                 w(o, ESQUERDA);
-                qrImagem(o, urlTeste, tipoB);
+                qrImagem(o, urlTeste, escStar);
             }
         } else {
             int largura = Prefs.largura(ctx);
@@ -347,7 +350,7 @@ public final class PrinterA930 {
                 Thread.sleep(15);
             }
             // dá tempo da impressora receber tudo antes de fechar a conexão
-            Thread.sleep(Math.min(8000, 1000 + dados.length / 15));
+            Thread.sleep(Math.min(8000, 1500 + dados.length / 10));
         } finally {
             try { s.close(); } catch (Throwable ignored) {}
         }
