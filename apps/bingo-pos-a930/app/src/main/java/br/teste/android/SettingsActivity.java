@@ -62,9 +62,9 @@ public class SettingsActivity extends Activity {
         box.addView(botoes);
 
         box.addView(titulo("2. Tipo de impressão"));
-        box.addView(texto("Se a folha não sair, troque o tipo e teste de novo."));
+        box.addView(texto("Se o QR não sair, troque o tipo e teste de novo."));
         RadioGroup modo = new RadioGroup(this);
-        String[] modos = {"Imagem A (recomendado)", "Imagem B", "Texto + QR da impressora"};
+        String[] modos = {"Tudo em imagem A", "Tudo em imagem B", "Texto + QR em imagem A (recomendado)", "Texto + QR em imagem B"};
         for (int i = 0; i < modos.length; i++) {
             RadioButton rb = new RadioButton(this);
             rb.setText(modos[i]);
@@ -75,7 +75,7 @@ public class SettingsActivity extends Activity {
         modo.setOnCheckedChangeListener((g, id) -> Prefs.setModo(this, id - 30000));
         box.addView(modo);
 
-        box.addView(texto("Largura (imagem):"));
+        box.addView(texto("Largura (só para \"Tudo em imagem\"):"));
         RadioGroup rg = new RadioGroup(this);
         for (int px : LARGURAS) {
             RadioButton rb = new RadioButton(this);
