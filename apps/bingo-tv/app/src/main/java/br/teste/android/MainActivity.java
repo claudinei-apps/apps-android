@@ -46,10 +46,23 @@ public class MainActivity extends Activity {
     private FrameLayout raiz;
     private WebView web;
     private TextView aviso;
+    private TextView dbg;
+    private final List<String> logs = new ArrayList<String>();
     private final Handler handler = new Handler();
     private boolean erro = false;
 
-    // ---- Audio nativo (a TV antiga nao toca o audio do navegador interno) ----
+    private void log(final String m) {
+        handler.post(new Runnable() {
+            public void run() {
+                logs.add(m);
+                while (logs.size() > 6) logs.remove(0);
+                StringBuilder sb = new StringBuilder();
+                for (String l : logs) sb.append(l).append('\n');
+                if (dbg != null) dbg.setText(sb.toString());
+            }
+        });
+    }
+
     private static class Clip {
         MediaPlayer mp;
         int token = 0;
@@ -61,7 +74,7 @@ public class MainActivity extends Activity {
     private final Map<String, List<Runnable>> baixando = new HashMap<String, List<Runnable>>();
 
     private static final String SHIM =
-        "(function(){if(window.__bgNative||!window.BingoNative)return;window.__bgNative=1;var n=0;"
+        "(function(){if(window.__bgNative||!window.BingoNative)return;window.__bgNative=1;var n=0;try{BingoNative.hello()}catch(e){}"
         + "function A(src){this.id=++n;this.src=src||'';this.currentTime=0;this.readyState=4;this.preload='';this.paused=true;"
         + "if(src){try{BingoNative.prefetch(this.src)}catch(e){}}}"
         + "A.prototype.play=function(){this.paused=false;try{BingoNative.play(this.id,this.src,Math.round((this.currentTime||0)*1000))}catch(e){}"
@@ -72,12 +85,16 @@ public class MainActivity extends Activity {
 
     public class Ponte {
         @JavascriptInterface
+        public void hello() { log("JS ligado ao app"); }
+
+        @JavascriptInterface
         public void prefetch(final String src) {
             handler.post(new Runnable() { public void run() { garantirArquivo(src, null); } });
         }
 
         @JavascriptInterface
         public void play(final int id, final String src, final int inicioMs) {
+            log("play " + id + " @" + inicioMs);
             handler.post(new Runnable() { public void run() { tocar(id, src, inicioMs); } });
         }
 
@@ -106,7 +123,7 @@ public class MainActivity extends Activity {
 
     private void garantirArquivo(final String src, Runnable depois) {
         final String full = urlCompleta(src);
-        if (full == null) return;
+        if (full == null) { log("url ignorada: " + src); return; }
         final File f = arquivoLocal(src);
         if (f.exists() && f.length() > 0) {
             if (depois != null) depois.run();
@@ -122,13 +139,16 @@ public class MainActivity extends Activity {
         baixando.put(src, lista);
         new Thread(new Runnable() {
             public void run() {
-                boolean ok = baixar(full, f);
-                final boolean fok = ok;
+                String r = baixar(full, f);
+                final boolean fok = r == null;
+                String nome = f.getName();
+                if (nome.length() > 18) nome = nome.substring(0, 18);
+                log(fok ? ("baixou " + nome) : ("ERRO baixar: " + r));
                 handler.post(new Runnable() {
                     public void run() {
                         List<Runnable> l = baixando.remove(src);
                         if (fok && l != null) {
-                            for (Runnable r : l) { try { r.run(); } catch (Throwable t) { } }
+                            for (Runnable x : l) { try { x.run(); } catch (Throwable t) { } }
                         }
                     }
                 });
@@ -136,12 +156,12 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    private boolean baixar(String full, File destino) {
+    // devolve null se deu certo, ou o motivo do erro
+    private String baixar(String full, File destino) {
         File tmp = new File(destino.getPath() + ".tmp");
         try {
             HttpURLConnection c = (HttpURLConnection) new URL(full).openConnection();
             if (c instanceof HttpsURLConnection) {
-                // TVs antigas nao tem o certificado raiz novo: aceita so para o dominio do Bingo
                 SSLContext ctx = SSLContext.getInstance("TLS");
                 ctx.init(null, new TrustManager[] { new X509TrustManager() {
                     public void checkClientTrusted(X509Certificate[] a, String b) { }
@@ -152,7 +172,8 @@ public class MainActivity extends Activity {
             }
             c.setConnectTimeout(15000);
             c.setReadTimeout(30000);
-            if (c.getResponseCode() != 200) return false;
+            int code = c.getResponseCode();
+            if (code != 200) return "HTTP " + code;
             InputStream in = c.getInputStream();
             FileOutputStream out = new FileOutputStream(tmp);
             byte[] buf = new byte[16384];
@@ -160,10 +181,10 @@ public class MainActivity extends Activity {
             while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
             out.close();
             in.close();
-            return tmp.renameTo(destino);
+            return tmp.renameTo(destino) ? null : "renomear";
         } catch (Throwable t) {
             try { tmp.delete(); } catch (Throwable t2) { }
-            return false;
+            return String.valueOf(t);
         }
     }
 
@@ -179,23 +200,32 @@ public class MainActivity extends Activity {
         garantirArquivo(src, new Runnable() {
             public void run() {
                 if (!clip.quer || clip.token != meuToken) return;
-                if (System.currentTimeMillis() - clip.pedidoEm > 4000) return;
+                if (System.currentTimeMillis() - clip.pedidoEm > 4000) { log("atrasou, pulou"); return; }
                 try {
                     if (clip.mp == null) {
                         MediaPlayer mp = new MediaPlayer();
                         mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
                         mp.setDataSource(arquivoLocal(src).getPath());
+                        mp.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+                            public boolean onError(MediaPlayer m, int what, int extra) {
+                                log("MP erro " + what + "/" + extra);
+                                return true;
+                            }
+                        });
                         mp.prepare();
                         mp.setVolume(1f, 1f);
                         mp.setOnSeekCompleteListener(new MediaPlayer.OnSeekCompleteListener() {
                             public void onSeekComplete(MediaPlayer m) {
-                                if (clip.quer) { try { m.start(); } catch (Throwable t) { } }
+                                if (clip.quer) {
+                                    try { m.start(); log("tocando"); } catch (Throwable t) { log("start: " + t); }
+                                }
                             }
                         });
                         clip.mp = mp;
                     }
                     clip.mp.seekTo(clip.inicioMs);
                 } catch (Throwable t) {
+                    log("ERRO player: " + t);
                     try { if (clip.mp != null) clip.mp.release(); } catch (Throwable t2) { }
                     clip.mp = null;
                 }
@@ -217,17 +247,18 @@ public class MainActivity extends Activity {
         try {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         } catch (Throwable t) { }
+        String bip = "bip ok";
         try {
             setVolumeControlStream(AudioManager.STREAM_MUSIC);
             AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
             am.setStreamMute(AudioManager.STREAM_MUSIC, false);
             am.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
-        } catch (Throwable t) { }
+            bip += " vol " + am.getStreamVolume(AudioManager.STREAM_MUSIC) + "/" + am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        } catch (Throwable t) { bip += " (foco: " + t + ")"; }
         try {
-            // Teste de som: um bip ao abrir o app
             ToneGenerator tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
             tg.startTone(ToneGenerator.TONE_PROP_BEEP);
-        } catch (Throwable t) { }
+        } catch (Throwable t) { bip = "bip ERRO " + t; }
         raiz = new FrameLayout(this);
         raiz.setBackgroundColor(Color.BLACK);
         setContentView(raiz);
@@ -238,6 +269,13 @@ public class MainActivity extends Activity {
         raiz.addView(aviso, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         aviso.setText("Carregando Bingo TV...");
         iniciar();
+        dbg = new TextView(this);
+        dbg.setTextColor(Color.YELLOW);
+        dbg.setBackgroundColor(0x99000000);
+        dbg.setTextSize(14);
+        dbg.setPadding(8, 4, 8, 4);
+        raiz.addView(dbg, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.LEFT));
+        log(bip + " | v1.0 diag");
     }
 
     private void iniciar() {
@@ -255,12 +293,12 @@ public class MainActivity extends Activity {
                 CookieManager cm = CookieManager.getInstance();
                 cm.setAcceptCookie(true);
             } catch (Throwable t) { }
-            try { web.addJavascriptInterface(new Ponte(), "BingoNative"); } catch (Throwable t) { }
+            try { web.addJavascriptInterface(new Ponte(), "BingoNative"); } catch (Throwable t) { log("ponte ERRO " + t); }
             web.setWebChromeClient(new WebChromeClient());
             web.setWebViewClient(new WebViewClient() {
                 @Override
                 public void onPageStarted(WebView v, String u, Bitmap icon) {
-                    try { v.evaluateJavascript(SHIM, null); } catch (Throwable t) { }
+                    try { v.evaluateJavascript(SHIM, null); } catch (Throwable t) { log("shim ERRO " + t); }
                 }
 
                 @Override
@@ -269,6 +307,10 @@ public class MainActivity extends Activity {
                         aviso.setVisibility(View.GONE);
                     }
                     try { CookieManager.getInstance().flush(); } catch (Throwable t) { }
+                    // segunda tentativa de instalar o shim (se ainda nao instalou)
+                    try { v.evaluateJavascript("window.__bgNative?'1':'0'", new android.webkit.ValueCallback<String>() {
+                        public void onReceiveValue(String r) { log("shim: " + r); }
+                    }); } catch (Throwable t) { }
                 }
 
                 @Override
@@ -278,7 +320,6 @@ public class MainActivity extends Activity {
 
                 @Override
                 public void onReceivedSslError(WebView v, android.webkit.SslErrorHandler h, android.net.http.SslError e) {
-                    // TVs antigas nao tem o certificado raiz novo: aceita so para o dominio do Bingo
                     String host = "";
                     try { host = android.net.Uri.parse(e.getUrl()).getHost(); } catch (Throwable t) { }
                     if (HOST.equals(host)) {
