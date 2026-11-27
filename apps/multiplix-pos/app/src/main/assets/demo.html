@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Multiplix POS</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:sans-serif;background:#0b3d1f;color:#fff}
+.demo{background:#b71c1c;color:#fff;text-align:center;font-weight:bold;padding:6px;font-size:13px}
+.demo button{margin-left:6px;font-size:12px;padding:4px 8px;border:0;border-radius:4px;background:#fff;color:#b71c1c;font-weight:bold}
+header{display:-webkit-box;display:flex;-webkit-box-pack:justify;justify-content:space-between;-webkit-box-align:center;align-items:center;padding:10px 12px;background:#06281390;border-bottom:2px solid #f5c518}
+h1{margin:0;font-size:24px;color:#f5c518;font-style:italic;letter-spacing:1px;text-shadow:0 2px 0 #7a5c00}
+h1 small{display:block;font-size:11px;color:#fff;font-style:normal;letter-spacing:2px}
+.cfg{background:#14532d;color:#fff;border:1px solid #f5c518;border-radius:6px;padding:7px 10px;font-size:13px}
+.sec{padding:10px 12px}
+.mods{display:-webkit-box;display:flex}
+.mod{-webkit-box-flex:1;flex:1;margin:0 3px;padding:9px 2px;border-radius:8px;background:#7f1010;text-align:center;border:2px solid #7f1010}
+.mod b{display:block;font-size:14px;color:#f5c518}
+.mod small{font-size:11px;color:#fff}
+.mod.on{border-color:#f5c518;background:#b71c1c}
+label{display:block;font-size:13px;color:#cfe8d5;margin:10px 0 4px}
+input{width:100%;font-size:28px;padding:8px;border-radius:8px;border:2px solid #f5c518;text-align:center;letter-spacing:6px;font-weight:bold;color:#000}
+#valor{letter-spacing:1px}
+.vals{display:-webkit-box;display:flex;margin-top:6px}
+.vals button{-webkit-box-flex:1;flex:1;margin:0 3px;padding:9px 0;font-size:15px;border:0;border-radius:6px;background:#14532d;color:#fff;border:1px solid #2e7d4f}
+.prev{background:#062813;border:1px solid #f5c518;border-radius:8px;padding:8px;margin-top:10px;text-align:center;font-size:14px}
+.prev b{color:#f5c518;font-size:20px}
+.btn{display:block;width:100%;padding:14px;font-size:18px;font-weight:bold;border:0;border-radius:10px;margin-top:10px}
+.add{background:#f5c518;color:#000}
+.fin{background:#1b8a3a;color:#fff;border:2px solid #f5c518}
+.btn:disabled{opacity:.45}
+.it{display:-webkit-box;display:flex;-webkit-box-pack:justify;justify-content:space-between;-webkit-box-align:center;align-items:center;background:#0f4a26;border-radius:8px;padding:8px;margin-top:6px}
+.it .n{font-size:16px;font-weight:bold}
+.it .p{font-size:12px;color:#cfe8d5}
+.it .x{background:#b71c1c;color:#fff;border:0;border-radius:6px;padding:8px 12px;font-weight:bold}
+.msg{min-height:20px;text-align:center;color:#f5c518;margin-top:8px;font-size:14px;font-weight:bold}
+.msg.err{color:#ff8a80}
+.tot{display:-webkit-box;display:flex;-webkit-box-pack:justify;justify-content:space-between;font-size:18px;margin-top:10px;font-weight:bold}
+.vazio{color:#9cc5a8;text-align:center;font-size:13px;padding:8px}
+</style>
+</head>
+<body>
+<div class="demo">DEMONSTRAÇÃO — SEM VALOR <button onclick="servidor()">Conectar ao servidor</button></div>
+<header>
+  <h1>MULTIPLIX<small>JOGO DE MILHAR</small></h1>
+  <button class="cfg" onclick="impressora()">Impressora</button>
+</header>
+
+<div class="sec">
+  <div class="mods" id="mods"></div>
+
+  <label id="lblNum">Número</label>
+  <input id="num" type="tel" inputmode="numeric" autocomplete="off">
+
+  <label>Valor da aposta (mínimo R$ 1,00)</label>
+  <input id="valor" type="tel" inputmode="decimal" autocomplete="off" value="1,00">
+  <div class="vals">
+    <button onclick="setValor(100)">1</button>
+    <button onclick="setValor(200)">2</button>
+    <button onclick="setValor(500)">5</button>
+    <button onclick="setValor(1000)">10</button>
+    <button onclick="setValor(2000)">20</button>
+  </div>
+
+  <div class="prev" id="prev"></div>
+  <button class="btn add" onclick="adicionar()">+ ADICIONAR APOSTA</button>
+  <div class="msg" id="msg"></div>
+
+  <div id="lista"></div>
+  <div class="tot"><span>TOTAL</span><span id="total">R$ 0,00</span></div>
+  <button class="btn fin" id="fin" onclick="finalizar()">FINALIZAR E IMPRIMIR</button>
+</div>
+
+<script>
+var TIPOS = ['MILHAR', 'CENTENA', 'DEZENA', 'UNIDADE'];
+var COT = { MILHAR: 3000, CENTENA: 500, DEZENA: 50, UNIDADE: 5 };   // prêmio por R$ 1,00
+var DIG = { MILHAR: 4, CENTENA: 3, DEZENA: 2, UNIDADE: 1 };
+var MINIMO = 100; // R$ 1,00 em centavos
+var tipo = 'MILHAR';
+var apostas = [];
+var imprimindo = false;
+
+function $(id) { return document.getElementById(id); }
+function pad(n, l) { n = String(n); while (n.length < l) n = '0' + n; return n; }
+function brl(c) {
+  var r = Math.floor(c / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return 'R$ ' + r + ',' + pad(c % 100, 2);
+}
+// "1,50" -> 150 ; "2" -> 200 ; "1.000,00" -> 100000
+function centavos(t) {
+  t = String(t || '').replace(/\s/g, '').replace('R$', '');
+  if (t.indexOf(',') >= 0) t = t.replace(/\./g, '').replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
+  var v = parseFloat(t);
+  if (isNaN(v) || v < 0) return 0;
+  return Math.round(v * 100);
+}
+function msg(t, erro) { var m = $('msg'); m.textContent = t || ''; m.className = erro ? 'msg err' : 'msg'; }
+
+function desenharTipos() {
+  var h = '';
+  for (var i = 0; i < TIPOS.length; i++) {
+    var k = TIPOS[i];
+    h += '<div class="mod' + (k === tipo ? ' on' : '') + '" onclick="escolher(\'' + k + '\')"><b>' + k +
+         '</b><small>' + brl(COT[k] * 100).replace('R$ ', '') + '</small></div>';
+  }
+  $('mods').innerHTML = h;
+  $('lblNum').textContent = 'Número da ' + tipo.toLowerCase() + ' (' + DIG[tipo] + ' algarismo' + (DIG[tipo] > 1 ? 's' : '') + ')';
+  $('num').maxLength = DIG[tipo];
+  $('num').placeholder = pad('', DIG[tipo]).replace(/0/g, '0');
+}
+function escolher(k) {
+  tipo = k;
+  var n = $('num').value.replace(/\D/g, '');
+  if (n.length > DIG[k]) n = n.substr(n.length - DIG[k]);
+  $('num').value = n;
+  desenharTipos();
+  previa();
+  $('num').focus();
+}
+function setValor(c) { $('valor').value = brl(c).replace('R$ ', ''); previa(); }
+
+function previa() {
+  var n = $('num').value.replace(/\D/g, '');
+  if (n !== $('num').value) $('num').value = n;
+  var c = centavos($('valor').value);
+  var p = $('prev');
+  if (c < MINIMO) { p.innerHTML = 'Valor mínimo: R$ 1,00'; return; }
+  p.innerHTML = tipo + ' ' + (n || pad('', DIG[tipo]).replace(/0/g, '_')) + ' · ' + brl(c) +
+    '<br>Prêmio se acertar: <b>' + brl(c * COT[tipo]) + '</b>';
+}
+
+function adicionar() {
+  if (imprimindo) return;
+  var n = $('num').value.replace(/\D/g, '');
+  var c = centavos($('valor').value);
+  if (n.length !== DIG[tipo]) { msg('Digite ' + DIG[tipo] + ' algarismo(s) para ' + tipo + (DIG[tipo] > 1 ? ' (ex.: ' + pad('5', DIG[tipo]) + ')' : ''), true); return; }
+  if (c < MINIMO) { msg('Aposta mínima é R$ 1,00.', true); return; }
+  apostas.push({ tipo: tipo, numero: n, valor: c, premio: c * COT[tipo] });
+  $('num').value = '';
+  msg('Aposta adicionada.');
+  desenharLista();
+  previa();
+  $('num').focus();
+}
+function remover(i) { if (imprimindo) return; apostas.splice(i, 1); desenharLista(); }
+
+function totalCentavos() { var t = 0; for (var i = 0; i < apostas.length; i++) t += apostas[i].valor; return t; }
+
+function desenharLista() {
+  var h = '';
+  if (!apostas.length) h = '<div class="vazio">Nenhuma aposta no bilhete.</div>';
+  for (var i = 0; i < apostas.length; i++) {
+    var a = apostas[i];
+    h += '<div class="it"><div><div class="n">' + a.tipo + ' ' + a.numero + ' · ' + brl(a.valor) + '</div>' +
+         '<div class="p">Prêmio: ' + brl(a.premio) + '</div></div>' +
+         '<button class="x" onclick="remover(' + i + ')">X</button></div>';
+  }
+  $('lista').innerHTML = h;
+  $('total').textContent = brl(totalCentavos());
+  $('fin').disabled = !apostas.length || imprimindo;
+}
+
+function agora() {
+  var d = new Date();
+  return pad(d.getDate(), 2) + '/' + pad(d.getMonth() + 1, 2) + '/' + d.getFullYear() + ' ' +
+         pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2);
+}
+
+function finalizar() {
+  if (!apostas.length || imprimindo) return;
+  var id = 'DEMO-' + Date.now();
+  var bets = [];
+  for (var i = 0; i < apostas.length; i++) {
+    var a = apostas[i];
+    bets.push({ type: a.tipo, number: a.numero, amount: brl(a.valor), prize: brl(a.premio) });
+  }
+  var pt = [];
+  for (var k = 0; k < TIPOS.length; k++) pt.push({ label: TIPOS[k], amount: brl(COT[TIPOS[k]] * 100) });
+  var t = {
+    receiptKind: 'MULTIPLIX', printRequestId: id, demo: true,
+    tenant: 'MULTIPLIX', salePoint: 'MODO DEMONSTRACAO',
+    ticketId: id.substr(5), round: 'DEMO', drawDate: agora(),
+    bets: bets, total: brl(totalCentavos()),
+    statusText: 'SEM VALOR', paytable: pt, paytableTitle: 'COTACAO POR R$ 1,00'
+  };
+  if (!window.KenoPrinter) {
+    msg('Fora da POS: bilhete ' + t.ticketId + ' · total ' + t.total);
+    apostas = []; desenharLista();
+    return;
+  }
+  imprimindo = true; desenharLista();
+  var r = {};
+  try { r = JSON.parse(KenoPrinter.printTicket(JSON.stringify(t))); } catch (e) { r = { ok: false, message: 'Falha ao enviar para a impressora.' }; }
+  if (!r.ok) { imprimindo = false; desenharLista(); msg(r.message || 'Não imprimiu.', true); }
+}
+
+window.onKenoPrintEvent = function (e) {
+  if (!e) return;
+  if (e.status === 'printed') {
+    imprimindo = false; apostas = []; desenharLista(); msg('Bilhete impresso.');
+  } else if (e.status === 'failed') {
+    imprimindo = false; desenharLista(); msg(e.message || 'Não imprimiu.', true);
+  } else {
+    msg(e.message || 'Imprimindo...');
+  }
+};
+
+function impressora() { if (window.KenoPrinter) KenoPrinter.openPrinterManager(); }
+function servidor() { if (window.KenoPrinter && KenoPrinter.tryServer) KenoPrinter.tryServer(); else location.reload(); }
+
+$('num').oninput = previa;
+$('valor').oninput = previa;
+desenharTipos();
+desenharLista();
+previa();
+</script>
+</body>
+</html>
