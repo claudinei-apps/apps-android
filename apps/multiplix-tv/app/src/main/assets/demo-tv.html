@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Multiplix TV</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden}
+body{font-family:Arial,Helvetica,sans-serif;color:#fff;
+ background:#0a5a26;background:radial-gradient(ellipse at center,#22a447 0%,#0b6a2c 45%,#053d18 100%)}
+.gold{color:#ffd23a}
+.top{height:21vh;text-align:center;position:relative}
+.logo{font-size:10.5vh;font-weight:900;font-style:italic;letter-spacing:.3vw;line-height:13vh;padding-top:1vh;
+ text-shadow:0 .5vh 0 #6b4e00,0 1vh 2vh rgba(0,0,0,.6)}
+.logo .m{color:#f2f2f2}.logo .p{color:#ffc928}
+.pill{display:inline-block;background:#c4161c;background:linear-gradient(#e2262c,#9c0f14);border:.5vh solid #ffd23a;
+ border-radius:5vh;padding:.4vh 4vw;font-size:4.2vh;font-weight:900;font-style:italic;box-shadow:0 .6vh 1.5vh rgba(0,0,0,.5)}
+.clover{position:absolute;top:3vh;font-size:13vh;color:#29c24f;text-shadow:0 0 2vh #0f0,0 .5vh 0 #0a4}
+.cl1{left:3vw}.cl2{right:3vw}
+.mid{display:-webkit-box;display:flex;height:69vh;padding:0 1.5vw}
+.panel{background:rgba(3,50,20,.85);border:.6vh solid #e3b21b;border-radius:2vh;box-shadow:0 0 2vh rgba(255,210,58,.4)}
+.left{width:23vw;padding:1.5vh 1vw;align-self:flex-start}
+.left h3{text-align:center;color:#ffd23a;font-size:4.4vh;margin-bottom:1vh;font-weight:900}
+.bet{display:-webkit-box;display:flex;-webkit-box-align:center;align-items:center;background:#0c4d22;border:.35vh solid #e3b21b;border-radius:1.4vh;margin:1vh 0;overflow:hidden}
+.bet i{display:block;width:5.5vw;text-align:center;font-style:normal;font-size:5vh;background:#c4161c;color:#ffd23a;padding:.6vh 0}
+.bet div{-webkit-box-flex:1;flex:1;text-align:center}
+.bet b{display:block;font-size:3.6vh}
+.bet small{display:block;font-size:2.2vh;color:#ffd23a}
+.center{-webkit-box-flex:1;flex:1;margin:0 1.5vw;text-align:center}
+.rh{display:inline-block;background:#0c4d22;border:.5vh solid #e3b21b;border-radius:4vh;padding:.5vh 3vw;font-size:4.6vh;font-weight:900;color:#ffd23a;margin-bottom:1.5vh}
+.board{background:#7a1010;background:linear-gradient(#a21a1a,#5e0b0b);border:1vh solid #e3b21b;border-radius:3vh;padding:1.5vh 1.5vw;
+ box-shadow:0 0 3vh rgba(255,210,58,.7),inset 0 0 2vh rgba(0,0,0,.5)}
+.row{display:-webkit-box;display:flex;height:10.5vh;margin:1.2vh 0;border:.4vh solid #e3b21b;border-radius:1.5vh;overflow:hidden}
+.row .lb{width:30%;background:#c4161c;background:linear-gradient(#e0262b,#9c0f14);color:#ffd23a;font-size:5vh;font-weight:900;line-height:9.7vh}
+.row .vl{-webkit-box-flex:1;flex:1;background:#f4f4f4;background:linear-gradient(#fff,#d9d9d9);color:#111;font-size:8.5vh;font-weight:900;line-height:9.7vh;letter-spacing:1.2vw}
+.row.win .vl{animation:pisca .5s 6 alternate}
+@keyframes pisca{from{background:#fff}to{background:#ffe27a}}
+@-webkit-keyframes pisca{from{background:#fff}to{background:#ffe27a}}
+.row .vl .spin{color:#999}
+.right{width:23vw;padding:1.5vh 1vw;align-self:flex-start;text-align:center}
+.right h4{font-size:3.8vh;font-weight:900}
+.conc{background:#c4161c;border:.4vh solid #ffd23a;border-radius:1.4vh;font-size:5.2vh;font-weight:900;margin:.8vh 0 1.4vh}
+.info{border-top:.3vh solid rgba(227,178,27,.6);padding:1.2vh 0;text-align:left;display:-webkit-box;display:flex;-webkit-box-align:center;align-items:center}
+.info span{font-size:5.5vh;width:6vw;text-align:center;color:#ffd23a}
+.info b{display:block;font-size:2.8vh;color:#ffd23a}
+.info em{display:block;font-style:normal;font-size:4.2vh;font-weight:900}
+.status{margin-top:1vh;background:#0c4d22;border:.35vh solid #e3b21b;border-radius:1.4vh;padding:1vh;font-size:3vh}
+.status b{display:block;font-size:6vh;color:#ffd23a}
+.hist{margin-top:1vh;font-size:2.6vh;color:#d8f5df}
+.hist div{display:-webkit-box;display:flex;-webkit-box-pack:justify;justify-content:space-between;padding:.2vh .5vw;border-bottom:.2vh solid rgba(255,255,255,.12)}
+.hist div b{color:#ffd23a;letter-spacing:.3vw}
+.bottom{position:absolute;left:0;right:0;bottom:0;height:10vh;text-align:center}
+.stage{display:inline-block;width:46vw;height:6vh;margin-top:2vh;border-radius:50%;background:#1fb14a;border:.8vh solid #e3b21b;box-shadow:0 0 4vh #ffd23a}
+.coins{position:absolute;bottom:1vh;font-size:9vh;color:#ffc928;text-shadow:0 .5vh 0 #8a6500}
+.co1{left:3vw}.co2{right:3vw}
+.demo{position:absolute;left:0;right:0;bottom:0;background:rgba(183,28,28,.92);color:#fff;font-weight:bold;font-size:2.4vh;text-align:center;padding:.5vh}
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="clover cl1">&#9827;</span><span class="clover cl2">&#9827;</span>
+  <div class="logo"><span class="m">MULTI</span><span class="p">PLIX</span></div>
+  <div class="pill">JOGO DE MILHAR</div>
+</div>
+
+<div class="mid">
+  <div class="panel left">
+    <h3>APOSTE EM:</h3>
+    <div class="bet"><i>&#9822;</i><div><b>MILHAR</b><small>R$ 1,00 paga R$ 3.000,00</small></div></div>
+    <div class="bet"><i>&#9819;</i><div><b>CENTENA</b><small>R$ 1,00 paga R$ 500,00</small></div></div>
+    <div class="bet"><i>&#9670;</i><div><b>DEZENA</b><small>R$ 1,00 paga R$ 50,00</small></div></div>
+    <div class="bet"><i>&#9827;</i><div><b>UNIDADE</b><small>R$ 1,00 paga R$ 5,00</small></div></div>
+  </div>
+
+  <div class="center">
+    <div class="rh" id="titulo">RESULTADO DO SORTEIO</div>
+    <div class="board">
+      <div class="row" id="r0"><div class="lb">MILHAR</div><div class="vl" id="v0">----</div></div>
+      <div class="row" id="r1"><div class="lb">CENTENA</div><div class="vl" id="v1">---</div></div>
+      <div class="row" id="r2"><div class="lb">DEZENA</div><div class="vl" id="v2">--</div></div>
+      <div class="row" id="r3"><div class="lb">UNIDADE</div><div class="vl" id="v3">-</div></div>
+    </div>
+  </div>
+
+  <div class="panel right">
+    <h4>CONCURSO</h4>
+    <div class="conc" id="conc">N&ordm; 1</div>
+    <div class="info"><span>&#128197;</span><div><b>DATA</b><em id="data">--/--/----</em></div></div>
+    <div class="info"><span>&#128339;</span><div><b>HOR&Aacute;RIO</b><em id="hora">--:--:--</em></div></div>
+    <div class="status" id="status">Pr&oacute;ximo sorteio em<b id="cd">00:30</b></div>
+    <div class="hist" id="hist"></div>
+  </div>
+</div>
+
+<div class="bottom">
+  <span class="coins co1">&#9679;&#9679;</span>
+  <span class="stage"></span>
+  <span class="coins co2">&#9679;&#9679;</span>
+</div>
+<div class="demo">MODO DEMONSTRA&Ccedil;&Atilde;O &mdash; sorteio local, sem liga&ccedil;&atilde;o com as apostas das POS</div>
+
+<script>
+var ESPERA = 30;          // segundos entre sorteios (demonstração)
+var MOSTRA = 15;          // segundos mostrando o resultado
+var PASSO = 1800;         // ms para revelar cada algarismo
+var concurso = 1, historico = [];
+try {
+  concurso = parseInt(localStorage.getItem('mpx_conc') || '1', 10) || 1;
+  historico = JSON.parse(localStorage.getItem('mpx_hist') || '[]');
+} catch (e) {}
+
+function $(id) { return document.getElementById(id); }
+function pad(n, l) { n = String(n); while (n.length < l) n = '0' + n; return n; }
+
+// algarismo 0-9 sem viés (usa o gerador seguro do aparelho quando existe)
+function digito() {
+  var c = window.crypto || window.msCrypto;
+  if (c && c.getRandomValues) {
+    var a = new Uint32Array(1);
+    do { c.getRandomValues(a); } while (a[0] >= 4294967290);
+    return a[0] % 10;
+  }
+  return Math.floor(Math.random() * 10);
+}
+
+function dataHora(d) {
+  return { data: pad(d.getDate(), 2) + '/' + pad(d.getMonth() + 1, 2) + '/' + d.getFullYear(),
+           hora: pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2) + ':' + pad(d.getSeconds(), 2) };
+}
+
+function mostrarConcurso() { $('conc').innerHTML = 'N&ordm; ' + concurso; }
+function mostrarHist() {
+  var h = '';
+  for (var i = 0; i < historico.length && i < 4; i++) h += '<div><span>Nº ' + historico[i].c + '</span><b>' + historico[i].m + '</b></div>';
+  $('hist').innerHTML = h;
+}
+function limparLinhas() {
+  for (var i = 0; i < 4; i++) { $('r' + i).className = 'row'; }
+  $('v0').innerHTML = '----'; $('v1').innerHTML = '---'; $('v2').innerHTML = '--'; $('v3').innerHTML = '-';
+}
+
+var relogio = null;
+function contagem() {
+  var rest = ESPERA;
+  limparLinhas();
+  $('titulo').innerHTML = 'PR&Oacute;XIMO SORTEIO';
+  var prox = new Date(Date.now() + ESPERA * 1000);
+  var dh = dataHora(prox);
+  $('data').textContent = dh.data; $('hora').textContent = dh.hora;
+  mostrarConcurso();
+  $('status').innerHTML = 'Pr&oacute;ximo sorteio em<b id="cd"></b>';
+  function tick() {
+    $('cd').textContent = pad(Math.floor(rest / 60), 2) + ':' + pad(rest % 60, 2);
+    if (rest <= 0) { clearInterval(relogio); sortear(); return; }
+    rest--;
+  }
+  tick();
+  relogio = setInterval(tick, 1000);
+}
+
+function sortear() {
+  $('titulo').textContent = 'SORTEANDO...';
+  $('status').innerHTML = 'Sorteio em andamento<b>&#9827;</b>';
+  var res = [digito(), digito(), digito(), digito()];   // milhar = res[0]res[1]res[2]res[3]
+  var fixos = 0;                                        // quantos algarismos (da direita) já saíram
+  var giro = setInterval(function () {
+    var s = '';
+    for (var i = 0; i < 4; i++) {
+      if (i >= 4 - fixos) s += res[i];
+      else s += '<span class="spin">' + Math.floor(Math.random() * 10) + '</span>';
+    }
+    $('v0').innerHTML = s;
+  }, 70);
+  function revelar() {
+    fixos++;
+    var m = res.join('');
+    if (fixos >= 1) $('v3').textContent = m.substr(3);
+    if (fixos >= 2) $('v2').textContent = m.substr(2);
+    if (fixos >= 3) $('v1').textContent = m.substr(1);
+    if (fixos < 4) { setTimeout(revelar, PASSO); return; }
+    clearInterval(giro);
+    $('v0').textContent = m;
+    fim(m);
+  }
+  setTimeout(revelar, PASSO);
+}
+
+function fim(m) {
+  $('titulo').textContent = 'RESULTADO DO SORTEIO';
+  for (var i = 0; i < 4; i++) $('r' + i).className = 'row win';
+  var dh = dataHora(new Date());
+  $('data').textContent = dh.data; $('hora').textContent = dh.hora;
+  $('status').innerHTML = 'Resultado do concurso<b>' + m + '</b>';
+  historico.unshift({ c: concurso, m: m });
+  if (historico.length > 10) historico.length = 10;
+  concurso++;
+  try { localStorage.setItem('mpx_conc', String(concurso)); localStorage.setItem('mpx_hist', JSON.stringify(historico)); } catch (e) {}
+  mostrarHist();
+  setTimeout(contagem, MOSTRA * 1000);
+}
+
+mostrarHist();
+contagem();
+</script>
+</body>
+</html>
