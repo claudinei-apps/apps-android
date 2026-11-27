@@ -39,3 +39,8 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 }
+
+dependencies {
+    // gera o QR Code dentro do aparelho
+    implementation 'com.google.zxing:core:3.3.3'
+}
