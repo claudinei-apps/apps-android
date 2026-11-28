@@ -268,6 +268,30 @@ public class MainActivity extends Activity {
         iniciar();
     }
 
+    /** Diz à página de demonstração o tamanho real da tela (em pixels de página). */
+    private void enviarTamanho() {
+        if (web == null || !emDemo) return;
+        try {
+            float d = getResources().getDisplayMetrics().density;
+            if (d <= 0) d = 1;
+            int w = (int) Math.floor(web.getWidth() / d);
+            int h = (int) Math.floor(web.getHeight() / d);
+            if (w > 0 && h > 0) web.evaluateJavascript("window.mpxTela&&mpxTela(" + w + "," + h + ")", null);
+        } catch (Throwable t) { }
+    }
+
+    private void modoDemo(boolean demo) {
+        if (web == null) return;
+        WebSettings s = web.getSettings();
+        if (demo) {
+            s.setUseWideViewPort(true);
+            s.setLoadWithOverviewMode(false);
+        } else {
+            s.setUseWideViewPort(false);
+            s.setLoadWithOverviewMode(true);
+        }
+    }
+
     private void iniciar() {
         try {
             web = new WebView(this);
@@ -276,14 +300,22 @@ public class MainActivity extends Activity {
             s.setDomStorageEnabled(true);
             s.setLoadWithOverviewMode(true);
             s.setCacheMode(WebSettings.LOAD_DEFAULT);
+            s.setSupportZoom(false);
+            s.setBuiltInZoomControls(false);
             try { s.setTextZoom(100); } catch (Throwable t) { }
-            try { s.setSupportZoom(false); s.setBuiltInZoomControls(false); } catch (Throwable t) { }
             try { s.setMediaPlaybackRequiresUserGesture(false); } catch (Throwable t) { }
             try { s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW); } catch (Throwable t) { }
             web.setBackgroundColor(Color.rgb(6, 40, 19));
+            web.setVerticalScrollBarEnabled(false);
+            web.setHorizontalScrollBarEnabled(false);
             try { CookieManager.getInstance().setAcceptCookie(true); } catch (Throwable t) { }
             try { web.addJavascriptInterface(new Ponte(), "BingoNative"); } catch (Throwable t) { log("ponte: " + t); }
             web.setWebChromeClient(new WebChromeClient());
+            web.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+                public void onLayoutChange(View v, int l, int t, int r, int bt, int ol, int ot, int or, int ob) {
+                    if (r - l != or - ol || bt - t != ob - ot) handler.post(new Runnable() { public void run() { enviarTamanho(); } });
+                }
+            });
             web.setWebViewClient(new WebViewClient() {
                 @Override
                 public void onPageStarted(WebView v, String u, Bitmap icon) {
@@ -297,6 +329,9 @@ public class MainActivity extends Activity {
                     try { CookieManager.getInstance().flush(); } catch (Throwable t) { }
                     if (u != null && !u.startsWith("file:")) {
                         try { v.evaluateJavascript(SHIM, null); } catch (Throwable t) { }
+                    } else {
+                        enviarTamanho();
+                        handler.postDelayed(new Runnable() { public void run() { enviarTamanho(); } }, 800);
                     }
                 }
 
@@ -338,10 +373,8 @@ public class MainActivity extends Activity {
     private void carregarServidor() {
         handler.removeCallbacks(tentarServidor);
         emDemo = false;
-        if (web != null) {
-            try { web.getSettings().setUseWideViewPort(false); } catch (Throwable t) { }
-            web.loadUrl(URL_TV);
-        }
+        modoDemo(false);
+        if (web != null) web.loadUrl(URL_TV);
     }
 
     private void abrirDemo() {
@@ -349,8 +382,7 @@ public class MainActivity extends Activity {
             public void run() {
                 if (emDemo || web == null) return;
                 emDemo = true;
-                // a demonstração se encaixa sozinha na tela: respeita o tamanho real da tela, sem zoom
-                try { web.getSettings().setUseWideViewPort(true); } catch (Throwable t) { }
+                modoDemo(true);
                 web.loadUrl(DEMO);
                 handler.removeCallbacks(tentarServidor);
                 handler.postDelayed(tentarServidor, TENTAR_DE_NOVO_MS);
