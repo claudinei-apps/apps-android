@@ -1,0 +1,5 @@
+#logo{left:-55px;top:-80px;-webkit-transform:rotate(-10deg) scale(.56);transform:rotate(-10deg) scale(.56)}
+@-webkit-keyframes logoPula{0%,100%{-webkit-transform:rotate(-10deg) scale(.56)}50%{-webkit-transform:rotate(-8deg) scale(.6)}}
+@keyframes logoPula{0%,100%{transform:rotate(-10deg) scale(.56)}50%{transform:rotate(-8deg) scale(.6)}}
+#slogan{left:190px;top:258px;font-size:44px}
+#sub{left:330px;top:304px;width:190px}

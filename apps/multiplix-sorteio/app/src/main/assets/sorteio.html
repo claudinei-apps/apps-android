@@ -6,6 +6,7 @@
 <title>Multiplix Sorteio</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Poppins:ital,wght@0,700;0,800;0,900;1,800;1,900&display=swap">
 <link rel="stylesheet" href="estilo.css">
+<link rel="stylesheet" href="ajuste.css">
 </head>
 <body>
 <div id="wrap">
@@ -13,33 +14,36 @@
 
   <div id="fundo" class="ab"><svg id="raiosF" viewBox="0 0 3568 1883"></svg></div>
 
-  <svg id="deco" class="ab" style="left:0;top:0;width:1568px;height:883px;overflow:visible" viewBox="0 0 1568 883"></svg>
+  <svg id="deco" style="display:none" viewBox="0 0 1568 883"></svg>
 
-  <div id="logo" class="ab"></div>
-  <div id="slogan" class="ab">Escolha ganhar</div>
-  <svg id="sub" class="ab" viewBox="0 0 200 34"><path d="M4 28 Q95 22 196 4" stroke="#ffd21f" stroke-width="7" fill="none" stroke-linecap="round"/></svg>
+  <div id="esq" class="ab" style="left:0;top:0;width:0;height:0">
+    <div id="logo" class="ab"></div>
+    <div id="slogan" class="ab">Escolha ganhar</div>
+    <svg id="sub" class="ab" viewBox="0 0 200 34"><path d="M4 28 Q95 22 196 4" stroke="#ffd21f" stroke-width="7" fill="none" stroke-linecap="round"/></svg>
 
-  <!-- tabela de premios -->
-  <div class="ouro" style="left:36px;top:380px;width:548px;height:322px;border-radius:36px">
-    <div class="verde" style="left:9px;top:9px;right:9px;bottom:9px;border-radius:28px"></div>
-  </div>
-  <div class="pr" style="top:432px"><div class="py"></div><div class="pl">MILHAR</div><div class="pv">3.000,00</div></div>
-  <div class="pr" style="top:496px"><div class="py"></div><div class="pl">CENTENA</div><div class="pv">500,00</div></div>
-  <div class="pr" style="top:560px"><div class="py"></div><div class="pl">DEZENA</div><div class="pv">50,00</div></div>
-  <div class="pr" style="top:624px"><div class="py"></div><div class="pl">UNIDADE</div><div class="pv">5,00</div></div>
-  <div class="ouro" style="left:112px;top:322px;width:420px;height:92px;border-radius:46px">
-    <div class="verm" style="left:8px;top:8px;right:8px;bottom:8px;border-radius:38px"></div>
-    <div class="cada">Cada <b>1,00</b></div>
+    <!-- tabela de premios -->
+    <div class="ouro" style="left:36px;top:380px;width:548px;height:322px;border-radius:36px">
+      <div class="verde" style="left:9px;top:9px;right:9px;bottom:9px;border-radius:28px"></div>
+    </div>
+    <div class="pr" style="top:432px"><div class="py"></div><div class="pl">MILHAR</div><div class="pv">3.000,00</div></div>
+    <div class="pr" style="top:496px"><div class="py"></div><div class="pl">CENTENA</div><div class="pv">500,00</div></div>
+    <div class="pr" style="top:560px"><div class="py"></div><div class="pl">DEZENA</div><div class="pv">50,00</div></div>
+    <div class="pr" style="top:624px"><div class="py"></div><div class="pl">UNIDADE</div><div class="pv">5,00</div></div>
+    <div class="ouro" style="left:112px;top:322px;width:420px;height:92px;border-radius:46px">
+      <div class="verm" style="left:8px;top:8px;right:8px;bottom:8px;border-radius:38px"></div>
+      <div class="cada">Cada <b>1,00</b></div>
+    </div>
+    <div id="luzL" class="ab" style="left:0;top:0;width:0;height:0"></div>
   </div>
 
   <!-- titulo -->
-  <div class="ouro" style="left:590px;top:30px;width:890px;height:120px;border-radius:60px">
+  <div id="tit" class="ouro" style="left:590px;top:30px;width:890px;height:120px;border-radius:60px">
     <div class="verm" style="left:10px;top:10px;right:10px;bottom:10px;border-radius:50px"></div>
     <div class="tt">RESULTADO DO SORTEIO</div>
   </div>
 
   <!-- resultado -->
-  <div class="ouro" style="left:588px;top:168px;width:900px;height:535px;border-radius:46px">
+  <div id="bd" class="ouro" style="left:588px;top:168px;width:900px;height:535px;border-radius:46px">
     <div class="verde" style="left:11px;top:11px;right:11px;bottom:11px;border-radius:36px;background:linear-gradient(180deg,#0e6a1d,#053c0d)"></div>
   </div>
   <div class="row" id="r0" style="top:192px"><div class="vl"></div><div class="reels" id="k0"></div><div class="lb">MILHAR</div></div>
@@ -48,17 +52,17 @@
   <div class="row" id="r3" style="top:549px"><div class="vl"></div><div class="reels" id="k3"></div><div class="lb">UNIDADE</div></div>
 
   <!-- rodape -->
-  <div class="ouro pe" style="left:150px;width:440px">
+  <div id="p1" class="ouro pe" style="left:150px;width:440px">
     <div class="verde"></div>
     <svg viewBox="0 0 66 72"><rect x="3" y="12" width="60" height="56" rx="9" fill="none" stroke="#f2d31c" stroke-width="5"/><rect x="14" y="2" width="7" height="16" rx="3" fill="#f2d31c"/><rect x="45" y="2" width="7" height="16" rx="3" fill="#f2d31c"/><line x1="3" y1="28" x2="63" y2="28" stroke="#f2d31c" stroke-width="4"/><g fill="#f2d31c"><rect x="13" y="36" width="9" height="8"/><rect x="29" y="36" width="9" height="8"/><rect x="45" y="36" width="9" height="8"/><rect x="13" y="50" width="9" height="8"/><rect x="29" y="50" width="9" height="8"/><rect x="45" y="50" width="9" height="8"/></g></svg>
     <div class="t">CONCURSO</div><div class="v" id="conc">N&ordm; 58426</div>
   </div>
-  <div class="ouro pe" style="left:600px;width:424px">
+  <div id="p2" class="ouro pe" style="left:600px;width:424px">
     <div class="verde"></div>
     <svg viewBox="0 0 66 72"><rect x="3" y="12" width="60" height="56" rx="9" fill="none" stroke="#f2d31c" stroke-width="5"/><rect x="14" y="2" width="7" height="16" rx="3" fill="#f2d31c"/><rect x="45" y="2" width="7" height="16" rx="3" fill="#f2d31c"/><line x1="3" y1="28" x2="63" y2="28" stroke="#f2d31c" stroke-width="4"/><g fill="#f2d31c"><rect x="13" y="36" width="9" height="8"/><rect x="29" y="36" width="9" height="8"/><rect x="45" y="36" width="9" height="8"/><rect x="13" y="50" width="9" height="8"/><rect x="29" y="50" width="9" height="8"/><rect x="45" y="50" width="9" height="8"/></g></svg>
     <div class="t">DATA</div><div class="v" id="data">--/--/----</div>
   </div>
-  <div class="ouro pe" style="left:1034px;width:424px">
+  <div id="p3" class="ouro pe" style="left:1034px;width:424px">
     <div class="verde"></div>
     <svg viewBox="0 0 66 72"><circle cx="33" cy="36" r="29" fill="none" stroke="#f2d31c" stroke-width="6"/><path d="M33 17 V37 L45 48" fill="none" stroke="#f2d31c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <div class="t">HOR&Aacute;RIO</div><div class="v" id="hora">--:--:--</div>
@@ -79,5 +83,6 @@
 </div>
 </div>
 <script src="sorteio.js"></script>
+<script src="layout.js"></script>
 </body>
 </html>
