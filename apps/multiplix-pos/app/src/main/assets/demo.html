@@ -13,6 +13,9 @@ header{display:-webkit-box;display:flex;-webkit-box-pack:justify;justify-content
 h1{margin:0;font-size:24px;color:#f5c518;font-style:italic;letter-spacing:1px;text-shadow:0 2px 0 #7a5c00}
 h1 small{display:block;font-size:11px;color:#fff;font-style:normal;letter-spacing:2px}
 .cfg{background:#14532d;color:#fff;border:1px solid #f5c518;border-radius:6px;padding:7px 10px;font-size:13px}
+.prox{background:#062813;border:1px solid #f5c518;border-radius:8px;margin:10px 12px 0;padding:8px;text-align:center;font-size:14px}
+.prox b{color:#f5c518;font-size:18px}
+.prox small{color:#cfe8d5}
 .sec{padding:10px 12px}
 .mods{display:-webkit-box;display:flex}
 .mod{-webkit-box-flex:1;flex:1;margin:0 3px;padding:9px 2px;border-radius:8px;background:#7f1010;text-align:center;border:2px solid #7f1010}
@@ -53,6 +56,8 @@ input{width:100%;font-size:28px;padding:8px;border-radius:8px;border:2px solid #
   <h1>MULTIPLIX<small>JOGO DE MILHAR</small></h1>
   <button class="cfg" onclick="impressora()">Impressora</button>
 </header>
+
+<div class="prox" id="prox"></div>
 
 <div class="sec">
   <div class="mods" id="mods"></div>
@@ -107,12 +112,39 @@ var tipo = 'MILHAR';
 var apostas = [];
 var qtd = 1;
 var imprimindo = false;
+var avisoRodada = '';
+
+/* ---------- horário junto com o Keno ----------
+   Keno de 4 em 4 minutos (minutos 00, 04, 08...); Multiplix 2 minutos antes (02, 06, 10...).
+   As vendas de um sorteio fecham FECHA_MS antes dele; depois disso o bilhete vale para o próximo. */
+var CICLO = 240000;
+var KENO_OFFSET = 0;
+var ANTES_KENO = 120000;
+var MPX_OFFSET = ((KENO_OFFSET - ANTES_KENO) % CICLO + CICLO) % CICLO;
+var FECHA_MS = 10000;    // vendas fecham 10 segundos antes do sorteio
+var REF = new Date(2026, 10, 28, 0, 0, 0).getTime() + MPX_OFFSET;
+var CONC_REF = 58426;
+
+function proximoSorteio(t) {
+  var d = new Date(t);
+  var meia = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  var k = Math.floor((t - meia - MPX_OFFSET) / CICLO) + 1;
+  return meia + MPX_OFFSET + k * CICLO;
+}
+function numeroConcurso(slot) { return CONC_REF + Math.round((slot - REF) / CICLO); }
+// sorteio em que um bilhete vendido AGORA vai concorrer
+function rodadaVenda() { return proximoSorteio(Date.now() + FECHA_MS); }
 
 function $(id) { return document.getElementById(id); }
 function pad(n, l) { n = String(n); while (n.length < l) n = '0' + n; return n; }
 function brl(c) {
   var r = Math.floor(c / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   return 'R$ ' + r + ',' + pad(c % 100, 2);
+}
+function hhmm(t) { var d = new Date(t); return pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2); }
+function dataHora(t) {
+  var d = new Date(t);
+  return pad(d.getDate(), 2) + '/' + pad(d.getMonth() + 1, 2) + '/' + d.getFullYear() + ' ' + hhmm(t);
 }
 // "1,50" -> 150 ; "2" -> 200 ; "1.000,00" -> 100000
 function centavos(t) {
@@ -124,6 +156,13 @@ function centavos(t) {
   return Math.round(v * 100);
 }
 function msg(t, erro) { var m = $('msg'); m.textContent = t || ''; m.className = erro ? 'msg err' : 'msg'; }
+
+function atualizarProx() {
+  var slot = rodadaVenda();
+  var falta = Math.max(0, Math.floor((slot - FECHA_MS - Date.now()) / 1000));
+  $('prox').innerHTML = 'Vendendo para o sorteio <b>Nº ' + numeroConcurso(slot) + ' às ' + hhmm(slot) + '</b><br>' +
+    '<small>Vendas fecham em ' + Math.floor(falta / 60) + ':' + pad(falta % 60, 2) + ' (10 s antes do sorteio)</small>';
+}
 
 function desenharTipos() {
   var h = '';
@@ -211,15 +250,16 @@ function desenharLista() {
   $('fin').disabled = !apostas.length || imprimindo;
 }
 
-function agora() {
-  var d = new Date();
-  return pad(d.getDate(), 2) + '/' + pad(d.getMonth() + 1, 2) + '/' + d.getFullYear() + ' ' +
-         pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2);
-}
-
 function finalizar() {
   if (!apostas.length || imprimindo) return;
   var id = 'DEMO-' + Date.now();
+  // o concurso é decidido na hora de finalizar: se já fechou, vale para o próximo
+  var slot = rodadaVenda();
+  var conc = numeroConcurso(slot);
+  var foiProProximo = proximoSorteio(Date.now()) !== slot;
+  avisoRodada = foiProProximo
+    ? 'Vendas do Nº ' + numeroConcurso(proximoSorteio(Date.now())) + ' já fecharam: bilhete vale para o Nº ' + conc + ' (' + hhmm(slot) + ').'
+    : 'Bilhete vale para o Nº ' + conc + ' (' + hhmm(slot) + ').';
   var bets = [];
   for (var i = 0; i < apostas.length; i++) {
     var a = apostas[i];
@@ -230,17 +270,19 @@ function finalizar() {
   var t = {
     receiptKind: 'MULTIPLIX', printRequestId: id, demo: true,
     tenant: 'MULTIPLIX', salePoint: 'MODO DEMONSTRACAO',
-    ticketId: id.substr(5), round: 'DEMO', drawDate: agora(),
+    ticketId: id.substr(5), round: String(conc), drawDate: dataHora(slot),
     bets: bets, total: brl(totalCentavos()),
-    drawCount: qtd, subtotal: brl(subtotalCentavos()), drawsText: '',
+    drawCount: qtd, subtotal: brl(subtotalCentavos()),
+    drawsText: qtd > 1 ? ('CONCURSOS ' + conc + ' A ' + (conc + qtd - 1)) : '',
     statusText: 'SEM VALOR', paytable: pt, paytableTitle: 'COTACAO POR R$ 1,00'
   };
   if (!window.KenoPrinter) {
-    msg('Fora da POS: bilhete ' + t.ticketId + ' · ' + qtd + ' sorteio(s) · total ' + t.total);
+    msg('Fora da POS: bilhete ' + t.ticketId + ' · ' + qtd + ' sorteio(s) · total ' + t.total + '. ' + avisoRodada);
     apostas = []; setQtd(1);
     return;
   }
   imprimindo = true; desenharLista();
+  msg(avisoRodada);
   var r = {};
   try { r = JSON.parse(KenoPrinter.printTicket(JSON.stringify(t))); } catch (e) { r = { ok: false, message: 'Falha ao enviar para a impressora.' }; }
   if (!r.ok) { imprimindo = false; desenharLista(); msg(r.message || 'Não imprimiu.', true); }
@@ -249,7 +291,7 @@ function finalizar() {
 window.onKenoPrintEvent = function (e) {
   if (!e) return;
   if (e.status === 'printed') {
-    imprimindo = false; apostas = []; setQtd(1); msg('Bilhete impresso.');
+    imprimindo = false; apostas = []; setQtd(1); msg('Bilhete impresso. ' + avisoRodada);
   } else if (e.status === 'failed') {
     imprimindo = false; desenharLista(); msg(e.message || 'Não imprimiu.', true);
   } else {
@@ -265,6 +307,8 @@ $('valor').oninput = previa;
 desenharTipos();
 setQtd(1);
 msg('');
+atualizarProx();
+setInterval(atualizarProx, 1000);
 </script>
 </body>
 </html>
