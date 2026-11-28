@@ -163,6 +163,7 @@ public final class ReceiptRenderer {
     /** Bilhete a partir do JSON de impressão. */
     public static Bitmap ticket(JSONObject t, int width) {
         ReceiptRenderer r = new ReceiptRenderer(width);
+        int sorteios = Math.max(1, t.optInt("drawCount", 1));
         r.text(t.optString("tenant"), 22, true, true);
         r.text(t.optString("salePoint", t.optString("point")), 18, false, true);
         r.line();
@@ -170,6 +171,10 @@ public final class ReceiptRenderer {
         r.text("JOGO DE MILHAR", 16, false, true);
         r.text("BILHETE " + t.optString("ticketId"), 20, true, true);
         r.row("CONCURSO " + t.optString("round"), t.optString("drawDate"), 16, true);
+        if (sorteios > 1) {
+            r.text("VALE PARA " + sorteios + " SORTEIOS", 20, true, true);
+            if (!t.optString("drawsText").isEmpty()) r.text("CONCURSOS " + t.optString("drawsText"), 16, false, true);
+        }
         r.line();
 
         JSONArray bets = t.optJSONArray("bets");
@@ -178,10 +183,14 @@ public final class ReceiptRenderer {
                 JSONObject b = bets.optJSONObject(i);
                 if (b == null) continue;
                 r.row(b.optString("type") + " " + b.optString("number"), b.optString("amount"), 20, true);
-                r.row("  premio", b.optString("prize"), 16, false);
+                r.row(sorteios > 1 ? "  premio/sorteio" : "  premio", b.optString("prize"), 16, false);
             }
         }
         r.line();
+        if (sorteios > 1) {
+            if (!t.optString("subtotal").isEmpty()) r.row("POR SORTEIO", t.optString("subtotal"), 16, false);
+            r.row("SORTEIOS", "x " + sorteios, 16, false);
+        }
         r.row("TOTAL", t.optString("total"), 22, true);
         if (!t.optString("paymentMethod").isEmpty()) r.row("PAGAMENTO", t.optString("paymentMethod"), 15, false);
         if (!t.optString("statusText").isEmpty()) r.row("SITUACAO", t.optString("statusText"), 15, false);

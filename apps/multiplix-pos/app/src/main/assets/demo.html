@@ -24,6 +24,7 @@ input{width:100%;font-size:28px;padding:8px;border-radius:8px;border:2px solid #
 #valor{letter-spacing:1px}
 .vals{display:-webkit-box;display:flex;margin-top:6px}
 .vals button{-webkit-box-flex:1;flex:1;margin:0 3px;padding:9px 0;font-size:15px;border:0;border-radius:6px;background:#14532d;color:#fff;border:1px solid #2e7d4f}
+.vals button.on{background:#f5c518;color:#000;border-color:#f5c518;font-weight:bold}
 .prev{background:#062813;border:1px solid #f5c518;border-radius:8px;padding:8px;margin-top:10px;text-align:center;font-size:14px}
 .prev b{color:#f5c518;font-size:20px}
 .btn{display:block;width:100%;padding:14px;font-size:18px;font-weight:bold;border:0;border-radius:10px;margin-top:10px}
@@ -37,7 +38,13 @@ input{width:100%;font-size:28px;padding:8px;border-radius:8px;border:2px solid #
 .msg{min-height:20px;text-align:center;color:#f5c518;margin-top:8px;font-size:14px;font-weight:bold}
 .msg.err{color:#ff8a80}
 .tot{display:-webkit-box;display:flex;-webkit-box-pack:justify;justify-content:space-between;font-size:18px;margin-top:10px;font-weight:bold}
+.sub{display:-webkit-box;display:flex;-webkit-box-pack:justify;justify-content:space-between;font-size:14px;margin-top:8px;color:#cfe8d5}
 .vazio{color:#9cc5a8;text-align:center;font-size:13px;padding:8px}
+.qbox{background:#062813;border:1px solid #2e7d4f;border-radius:8px;padding:8px;margin-top:12px}
+.qtd{display:-webkit-box;display:flex;-webkit-box-align:center;align-items:center;-webkit-box-pack:center;justify-content:center}
+.qtd button{width:56px;height:46px;font-size:26px;font-weight:bold;border:0;border-radius:8px;background:#f5c518;color:#000}
+.qtd span{min-width:120px;text-align:center;font-size:26px;font-weight:bold;color:#f5c518}
+.qtd span small{display:block;font-size:11px;color:#cfe8d5;font-weight:normal}
 </style>
 </head>
 <body>
@@ -53,7 +60,7 @@ input{width:100%;font-size:28px;padding:8px;border-radius:8px;border:2px solid #
   <label id="lblNum">Número</label>
   <input id="num" type="tel" inputmode="numeric" autocomplete="off">
 
-  <label>Valor da aposta (mínimo R$ 1,00)</label>
+  <label>Valor da aposta por sorteio (mínimo R$ 1,00)</label>
   <input id="valor" type="tel" inputmode="decimal" autocomplete="off" value="1,00">
   <div class="vals">
     <button onclick="setValor(100)">1</button>
@@ -68,7 +75,25 @@ input{width:100%;font-size:28px;padding:8px;border-radius:8px;border:2px solid #
   <div class="msg" id="msg"></div>
 
   <div id="lista"></div>
-  <div class="tot"><span>TOTAL</span><span id="total">R$ 0,00</span></div>
+
+  <div class="qbox">
+    <label style="margin-top:0;text-align:center">O bilhete vale para quantos sorteios?</label>
+    <div class="qtd">
+      <button onclick="mudaQtd(-1)">&minus;</button>
+      <span id="qtd">1<small>sorteio</small></span>
+      <button onclick="mudaQtd(1)">+</button>
+    </div>
+    <div class="vals" id="qvals">
+      <button onclick="setQtd(1)">1</button>
+      <button onclick="setQtd(2)">2</button>
+      <button onclick="setQtd(3)">3</button>
+      <button onclick="setQtd(5)">5</button>
+      <button onclick="setQtd(10)">10</button>
+    </div>
+  </div>
+
+  <div class="sub" id="subLinha"><span>Por sorteio</span><span id="sub">R$ 0,00</span></div>
+  <div class="tot"><span id="totLbl">TOTAL</span><span id="total">R$ 0,00</span></div>
   <button class="btn fin" id="fin" onclick="finalizar()">FINALIZAR E IMPRIMIR</button>
 </div>
 
@@ -76,9 +101,11 @@ input{width:100%;font-size:28px;padding:8px;border-radius:8px;border:2px solid #
 var TIPOS = ['MILHAR', 'CENTENA', 'DEZENA', 'UNIDADE'];
 var COT = { MILHAR: 3000, CENTENA: 500, DEZENA: 50, UNIDADE: 5 };   // prêmio por R$ 1,00
 var DIG = { MILHAR: 4, CENTENA: 3, DEZENA: 2, UNIDADE: 1 };
-var MINIMO = 100; // R$ 1,00 em centavos
+var MINIMO = 100;        // R$ 1,00 em centavos
+var MAX_SORTEIOS = 20;   // limite de sorteios por bilhete (ajustável)
 var tipo = 'MILHAR';
 var apostas = [];
+var qtd = 1;
 var imprimindo = false;
 
 function $(id) { return document.getElementById(id); }
@@ -121,14 +148,31 @@ function escolher(k) {
 }
 function setValor(c) { $('valor').value = brl(c).replace('R$ ', ''); previa(); }
 
+/* ---------- quantidade de sorteios ---------- */
+function setQtd(n) {
+  if (imprimindo) return;
+  n = parseInt(n, 10) || 1;
+  if (n < 1) n = 1;
+  if (n > MAX_SORTEIOS) { n = MAX_SORTEIOS; msg('Máximo de ' + MAX_SORTEIOS + ' sorteios por bilhete.', true); }
+  qtd = n;
+  $('qtd').innerHTML = qtd + '<small>' + (qtd > 1 ? 'sorteios seguidos' : 'sorteio') + '</small>';
+  var bs = $('qvals').getElementsByTagName('button');
+  for (var i = 0; i < bs.length; i++) bs[i].className = (parseInt(bs[i].textContent, 10) === qtd) ? 'on' : '';
+  previa();
+  desenharLista();
+}
+function mudaQtd(d) { setQtd(qtd + d); }
+
 function previa() {
   var n = $('num').value.replace(/\D/g, '');
   if (n !== $('num').value) $('num').value = n;
   var c = centavos($('valor').value);
   var p = $('prev');
   if (c < MINIMO) { p.innerHTML = 'Valor mínimo: R$ 1,00'; return; }
-  p.innerHTML = tipo + ' ' + (n || pad('', DIG[tipo]).replace(/0/g, '_')) + ' · ' + brl(c) +
-    '<br>Prêmio se acertar: <b>' + brl(c * COT[tipo]) + '</b>';
+  var h = tipo + ' ' + (n || pad('', DIG[tipo]).replace(/0/g, '_')) + ' · ' + brl(c) + (qtd > 1 ? ' por sorteio' : '') +
+    '<br>Prêmio se acertar: <b>' + brl(c * COT[tipo]) + '</b>' + (qtd > 1 ? ' por sorteio' : '');
+  if (qtd > 1) h += '<br>Custo desta aposta em ' + qtd + ' sorteios: <b>' + brl(c * qtd) + '</b>';
+  p.innerHTML = h;
 }
 
 function adicionar() {
@@ -146,7 +190,9 @@ function adicionar() {
 }
 function remover(i) { if (imprimindo) return; apostas.splice(i, 1); desenharLista(); }
 
-function totalCentavos() { var t = 0; for (var i = 0; i < apostas.length; i++) t += apostas[i].valor; return t; }
+// soma de um sorteio; o total do bilhete é isso vezes a quantidade de sorteios
+function subtotalCentavos() { var t = 0; for (var i = 0; i < apostas.length; i++) t += apostas[i].valor; return t; }
+function totalCentavos() { return subtotalCentavos() * qtd; }
 
 function desenharLista() {
   var h = '';
@@ -154,10 +200,13 @@ function desenharLista() {
   for (var i = 0; i < apostas.length; i++) {
     var a = apostas[i];
     h += '<div class="it"><div><div class="n">' + a.tipo + ' ' + a.numero + ' · ' + brl(a.valor) + '</div>' +
-         '<div class="p">Prêmio: ' + brl(a.premio) + '</div></div>' +
+         '<div class="p">Prêmio: ' + brl(a.premio) + (qtd > 1 ? ' por sorteio' : '') + '</div></div>' +
          '<button class="x" onclick="remover(' + i + ')">X</button></div>';
   }
   $('lista').innerHTML = h;
+  $('sub').textContent = brl(subtotalCentavos());
+  $('subLinha').style.display = qtd > 1 ? '' : 'none';
+  $('totLbl').textContent = qtd > 1 ? 'TOTAL (' + qtd + ' sorteios)' : 'TOTAL';
   $('total').textContent = brl(totalCentavos());
   $('fin').disabled = !apostas.length || imprimindo;
 }
@@ -183,11 +232,12 @@ function finalizar() {
     tenant: 'MULTIPLIX', salePoint: 'MODO DEMONSTRACAO',
     ticketId: id.substr(5), round: 'DEMO', drawDate: agora(),
     bets: bets, total: brl(totalCentavos()),
+    drawCount: qtd, subtotal: brl(subtotalCentavos()), drawsText: '',
     statusText: 'SEM VALOR', paytable: pt, paytableTitle: 'COTACAO POR R$ 1,00'
   };
   if (!window.KenoPrinter) {
-    msg('Fora da POS: bilhete ' + t.ticketId + ' · total ' + t.total);
-    apostas = []; desenharLista();
+    msg('Fora da POS: bilhete ' + t.ticketId + ' · ' + qtd + ' sorteio(s) · total ' + t.total);
+    apostas = []; setQtd(1);
     return;
   }
   imprimindo = true; desenharLista();
@@ -199,7 +249,7 @@ function finalizar() {
 window.onKenoPrintEvent = function (e) {
   if (!e) return;
   if (e.status === 'printed') {
-    imprimindo = false; apostas = []; desenharLista(); msg('Bilhete impresso.');
+    imprimindo = false; apostas = []; setQtd(1); msg('Bilhete impresso.');
   } else if (e.status === 'failed') {
     imprimindo = false; desenharLista(); msg(e.message || 'Não imprimiu.', true);
   } else {
@@ -213,8 +263,8 @@ function servidor() { if (window.KenoPrinter && KenoPrinter.tryServer) KenoPrint
 $('num').oninput = previa;
 $('valor').oninput = previa;
 desenharTipos();
-desenharLista();
-previa();
+setQtd(1);
+msg('');
 </script>
 </body>
 </html>
