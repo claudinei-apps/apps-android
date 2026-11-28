@@ -37,7 +37,10 @@ body{font-family:Arial,Helvetica,sans-serif;color:#fff;
 .row.win .vl{animation:pisca .5s 6 alternate}
 @keyframes pisca{from{background:#fff}to{background:#ffe27a}}
 @-webkit-keyframes pisca{from{background:#fff}to{background:#ffe27a}}
-.row .vl .spin{color:#999}
+.vl .spin{color:#aaa}
+.vl .pop{color:#c4161c;display:inline-block;animation:pop .6s 1}
+@keyframes pop{0%{transform:scale(2.2)}100%{transform:scale(1)}}
+@-webkit-keyframes pop{0%{-webkit-transform:scale(2.2)}100%{-webkit-transform:scale(1)}}
 .right{width:23vw;padding:1.5vh 1vw;align-self:flex-start;text-align:center}
 .right h4{font-size:3.8vh;font-weight:900}
 .conc{background:#c4161c;border:.4vh solid #ffd23a;border-radius:1.4vh;font-size:5.2vh;font-weight:900;margin:.8vh 0 1.4vh}
@@ -103,7 +106,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:#fff;
 <script>
 var ESPERA = 30;          // segundos entre sorteios (demonstração)
 var MOSTRA = 15;          // segundos mostrando o resultado
-var PASSO = 1800;         // ms para revelar cada algarismo
+var PASSO = 2500;         // ms entre um algarismo e o seguinte
 var concurso = 1, historico = [];
 try {
   concurso = parseInt(localStorage.getItem('mpx_conc') || '1', 10) || 1;
@@ -159,29 +162,65 @@ function contagem() {
   relogio = setInterval(tick, 1000);
 }
 
+/*
+ * Ritmo: os 4 algarismos saem da esquerda para a direita (d1 d2 d3 d4).
+ *  1º sai: MILHAR 1 _ _ _
+ *  2º sai: MILHAR 1 8 _ _  | CENTENA 8 _ _
+ *  3º sai: MILHAR 1 8 9 _  | CENTENA 8 9 _ | DEZENA 9 _
+ *  4º sai: MILHAR 1 8 9 9  | CENTENA 8 9 9 | DEZENA 9 9 | UNIDADE 9
+ * A linha de ordem r (0=milhar ... 3=unidade) mostra os algarismos de índice r a 3.
+ */
+function desenhar(res, k, girar) {
+  for (var r = 0; r < 4; r++) {
+    var s = '';
+    for (var j = r; j < 4; j++) {
+      if (j < k) {
+        s += (j === k - 1 && girar) ? '<span class="pop">' + res[j] + '</span>' : res[j];
+      } else if (girar) {
+        s += '<span class="spin">' + Math.floor(Math.random() * 10) + '</span>';
+      } else {
+        s += '-';
+      }
+    }
+    $('v' + r).innerHTML = s;
+  }
+}
+
 function sortear() {
   $('titulo').textContent = 'SORTEANDO...';
   $('status').innerHTML = 'Sorteio em andamento<b>&#9827;</b>';
-  var res = [digito(), digito(), digito(), digito()];   // milhar = res[0]res[1]res[2]res[3]
-  var fixos = 0;                                        // quantos algarismos (da direita) já saíram
+  var res = [digito(), digito(), digito(), digito()];
+  var k = 0;   // quantos algarismos já saíram
   var giro = setInterval(function () {
-    var s = '';
-    for (var i = 0; i < 4; i++) {
-      if (i >= 4 - fixos) s += res[i];
-      else s += '<span class="spin">' + Math.floor(Math.random() * 10) + '</span>';
+    // só gira o que ainda não saiu (os que já saíram ficam parados)
+    var atual = k;
+    for (var r = 0; r < 4; r++) {
+      var s = '';
+      for (var j = r; j < 4; j++) {
+        s += j < atual ? res[j] : '<span class="spin">' + Math.floor(Math.random() * 10) + '</span>';
+      }
+      $('v' + r).innerHTML = s;
     }
-    $('v0').innerHTML = s;
-  }, 70);
+  }, 80);
   function revelar() {
-    fixos++;
-    var m = res.join('');
-    if (fixos >= 1) $('v3').textContent = m.substr(3);
-    if (fixos >= 2) $('v2').textContent = m.substr(2);
-    if (fixos >= 3) $('v1').textContent = m.substr(1);
-    if (fixos < 4) { setTimeout(revelar, PASSO); return; }
+    k++;
     clearInterval(giro);
-    $('v0').textContent = m;
-    fim(m);
+    desenhar(res, k, true);
+    if (k < 4) {
+      giro = setInterval(function () {
+        for (var r = 0; r < 4; r++) {
+          var s = '';
+          for (var j = r; j < 4; j++) {
+            s += j < k ? res[j] : '<span class="spin">' + Math.floor(Math.random() * 10) + '</span>';
+          }
+          $('v' + r).innerHTML = s;
+        }
+      }, 80);
+      setTimeout(revelar, PASSO);
+      return;
+    }
+    desenhar(res, 4, false);
+    fim(res.join(''));
   }
   setTimeout(revelar, PASSO);
 }
