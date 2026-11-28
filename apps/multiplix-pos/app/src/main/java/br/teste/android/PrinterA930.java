@@ -244,6 +244,7 @@ public final class PrinterA930 {
 
     private static void textoTicket(ByteArrayOutputStream o, JSONObject t, boolean escStar) {
         String linha = "--------------------------------";
+        int sorteios = Math.max(1, t.optInt("drawCount", 1));
         w(o, CENTRO); w(o, NEGRITO);
         txt(o, t.optString("tenant"));
         w(o, NORMAL);
@@ -254,6 +255,13 @@ public final class PrinterA930 {
         w(o, NEGRITO); txt(o, "BILHETE " + t.optString("ticketId")); w(o, NORMAL);
         w(o, ESQUERDA);
         par(o, "CONCURSO " + t.optString("round"), t.optString("drawDate"));
+        if (sorteios > 1) {
+            w(o, CENTRO); w(o, NEGRITO);
+            txt(o, "VALE PARA " + sorteios + " SORTEIOS");
+            w(o, NORMAL);
+            if (!t.optString("drawsText").isEmpty()) txt(o, "CONCURSOS " + t.optString("drawsText"));
+            w(o, ESQUERDA);
+        }
         txt(o, linha);
         JSONArray bets = t.optJSONArray("bets");
         if (bets != null) {
@@ -263,10 +271,14 @@ public final class PrinterA930 {
                 w(o, NEGRITO);
                 par(o, b.optString("type") + " " + b.optString("number"), b.optString("amount"));
                 w(o, NORMAL);
-                par(o, "  premio", b.optString("prize"));
+                par(o, sorteios > 1 ? "  premio/sorteio" : "  premio", b.optString("prize"));
             }
         }
         txt(o, linha);
+        if (sorteios > 1) {
+            if (!t.optString("subtotal").isEmpty()) par(o, "POR SORTEIO", t.optString("subtotal"));
+            par(o, "SORTEIOS", "x " + sorteios);
+        }
         w(o, NEGRITO); par(o, "TOTAL", t.optString("total")); w(o, NORMAL);
         if (!t.optString("paymentMethod").isEmpty()) par(o, "PAGAMENTO", t.optString("paymentMethod"));
         if (!t.optString("statusText").isEmpty()) par(o, "SITUACAO", t.optString("statusText"));
