@@ -2,14 +2,16 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no">
 <title>Multiplix TV</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Poppins:ital,wght@0,700;0,800;0,900;1,800;1,900&family=Kalam:wght@700&display=block">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;overflow:hidden;background:#62c01e}
 body{font-family:Poppins,"Arial Black",Arial,sans-serif;font-weight:800}
+#wrap{position:fixed;left:0;top:0;right:0;bottom:0;width:100%;height:100%;overflow:hidden;background:#62c01e}
 #stage{position:absolute;left:0;top:0;width:1568px;height:883px;overflow:hidden;-webkit-transform-origin:0 0;transform-origin:0 0;
+ -webkit-transform:scale(.2);transform:scale(.2);visibility:hidden;
  background:linear-gradient(90deg,#55b81d 0,#6fc81c 128px,#bfe01a 128px,#e2ee3a 330px,#f7f2c2 330px,#faf5cf 600px,#f6f1c0 862px,#f2f18a 862px,#f3f3a0 975px,#e3f12a 975px,#d6ec1c 1568px)}
 .abs{position:absolute}
 
@@ -62,6 +64,7 @@ body{font-family:Poppins,"Arial Black",Arial,sans-serif;font-weight:800}
 </style>
 </head>
 <body>
+<div id="wrap">
 <div id="stage">
 
   <div id="logo"></div>
@@ -94,6 +97,7 @@ body{font-family:Poppins,"Arial Black",Arial,sans-serif;font-weight:800}
   </div>
 
 </div>
+</div>
 
 <script>
 var ESPERA = 30;          // segundos entre sorteios
@@ -105,16 +109,30 @@ try { concurso = parseInt(localStorage.getItem('mpx_conc2') || '58426', 10) || 5
 function $(id) { return document.getElementById(id); }
 function pad(n, l) { n = String(n); while (n.length < l) n = '0' + n; return n; }
 
-// ajusta o quadro 1568x883 a qualquer tela
+// ---- encaixa o quadro 1568x883 inteiro na tela (celular ou TV) ----
+var telaApp = null;        // tamanho informado pelo app (mais confiável)
+var ultimo = '';
+function mpxTela(w, h) { if (w > 0 && h > 0) { telaApp = [w, h]; ajustar(); } }
 function ajustar() {
-  var w = window.innerWidth, h = window.innerHeight;
+  var wr = $('wrap');
+  var w = wr.clientWidth || document.documentElement.clientWidth || window.innerWidth;
+  var h = wr.clientHeight || document.documentElement.clientHeight || window.innerHeight;
+  if (telaApp) { w = Math.min(w, telaApp[0]); h = Math.min(h, telaApp[1]); }
+  if (!w || !h) return;
+  var chave = w + 'x' + h;
+  if (chave === ultimo) return;
+  ultimo = chave;
   var s = Math.min(w / 1568, h / 883);
   var st = $('stage');
-  st.style.left = Math.round((w - 1568 * s) / 2) + 'px';
-  st.style.top = Math.round((h - 883 * s) / 2) + 'px';
+  st.style.left = Math.floor((w - 1568 * s) / 2) + 'px';
+  st.style.top = Math.floor((h - 883 * s) / 2) + 'px';
   st.style.webkitTransform = st.style.transform = 'scale(' + s + ')';
+  st.style.visibility = 'visible';
 }
 window.addEventListener('resize', ajustar);
+window.addEventListener('load', ajustar);
+window.addEventListener('orientationchange', function () { setTimeout(ajustar, 300); });
+setInterval(ajustar, 1000);
 ajustar();
 
 // logo 3D: profundidade (várias cópias deslocadas) + contorno claro + linha verde + letra creme
