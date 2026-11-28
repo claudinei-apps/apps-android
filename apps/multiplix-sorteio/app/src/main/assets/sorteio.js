@@ -1,11 +1,33 @@
-var PERIODO = 30000;   // um sorteio a cada 30 segundos
-var PRIMEIRO = 5000;   // primeiro sorteio 5 s depois de abrir
+/* ---------- horario dos sorteios (junto com o Keno) ----------
+ * O Keno sai de 4 em 4 minutos (minutos 00, 04, 08 ... de cada hora).
+ * O Multiplix sai sempre 2 minutos ANTES do Keno (minutos 02, 06, 10 ...).
+ * Se o Keno usar outra referencia, ajuste KENO_OFFSET (ms depois da meia-noite do 1o Keno do dia).
+ */
+var CICLO = 240000;        // 4 minutos
+var KENO_OFFSET = 0;       // Keno em 00:00, 00:04, 00:08 ...
+var ANTES_KENO = 120000;   // Multiplix 2 minutos antes do Keno
+var MPX_OFFSET = ((KENO_OFFSET - ANTES_KENO) % CICLO + CICLO) % CICLO;
+var ATRASO_MAX = 30000;    // se o aparelho atrasar mais que isso (tela apagada etc.), pula para o proximo
+var REF = new Date(2026, 10, 28, 0, 0, 0).getTime() + MPX_OFFSET; // 1o sorteio de 28/11/2026
+var CONC_REF = 58426;      // numero do concurso nesse horario de referencia
+
 var H = 96;            // altura de cada algarismo na roleta
 var PLANO = [[1500, 1400], [3000, 1400], [4500, 1500], [6200, 2700]];
 var FESTA_MS = 3600;
 
-var concurso = 58425;
-try { concurso = parseInt(localStorage.getItem('mpx_sorteio_conc') || '58425', 10) || 58425; } catch (e) {}
+// proximo horario de sorteio do Multiplix estritamente depois de t
+function proximoSorteio(t) {
+  var d = new Date(t);
+  var meia = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  var k = Math.floor((t - meia - MPX_OFFSET) / CICLO) + 1;
+  return meia + MPX_OFFSET + k * CICLO;
+}
+// numero do concurso calculado pelo horario (todos os aparelhos chegam no mesmo numero)
+function numeroConcurso(slot) { return CONC_REF + Math.round((slot - REF) / CICLO); }
+
+var concurso = 0;
+var ultimoSlot = 0;
+try { ultimoSlot = parseInt(localStorage.getItem('mpx_ultimo_slot') || '0', 10) || 0; } catch (e) {}
 
 function $(id) { return document.getElementById(id); }
 function pad(n, l) { n = String(n); while (n.length < l) n = '0' + n; return n; }
@@ -218,15 +240,15 @@ function mostrarData(d) {
 }
 
 var sorteando = false;
-var proximo = Date.now() + PRIMEIRO;
+var proximo = proximoSorteio(Date.now());
 
-function sortear() {
+function sortear(slot) {
   sorteando = true;
-  proximo = Date.now() + PERIODO;
-  concurso++;
-  try { localStorage.setItem('mpx_sorteio_conc', String(concurso)); } catch (e) {}
+  ultimoSlot = slot;
+  try { localStorage.setItem('mpx_ultimo_slot', String(slot)); } catch (e) {}
+  concurso = numeroConcurso(slot);
   $('conc').innerHTML = 'N&ordm; ' + concurso;
-  mostrarData(new Date());
+  mostrarData(new Date(slot));
   var res = [digito(), digito(), digito(), digito()];
   for (var r = 0; r < 4; r++) $('r' + r).className = 'row';
   $('stage').className = 'rapido';
@@ -291,9 +313,14 @@ function festa(res) {
 
 function tique() {
   if (sorteando) return;
-  if (Date.now() >= proximo) sortear();
+  var agora = Date.now();
+  if (agora < proximo) return;
+  var slot = proximo;
+  proximo = proximoSorteio(agora);
+  // so sorteia se estiver no horario (nao repete o mesmo concurso nem sorteia atrasado)
+  if (agora - slot <= ATRASO_MAX && slot !== ultimoSlot) sortear(slot);
 }
 
-$('conc').innerHTML = 'N&ordm; ' + (concurso + 1);
+$('conc').innerHTML = 'N&ordm; ' + numeroConcurso(proximo);
 mostrarData(new Date(proximo));
 setInterval(tique, 200);
