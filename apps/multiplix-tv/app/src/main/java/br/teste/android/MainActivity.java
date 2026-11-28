@@ -276,6 +276,8 @@ public class MainActivity extends Activity {
             s.setDomStorageEnabled(true);
             s.setLoadWithOverviewMode(true);
             s.setCacheMode(WebSettings.LOAD_DEFAULT);
+            try { s.setTextZoom(100); } catch (Throwable t) { }
+            try { s.setSupportZoom(false); s.setBuiltInZoomControls(false); } catch (Throwable t) { }
             try { s.setMediaPlaybackRequiresUserGesture(false); } catch (Throwable t) { }
             try { s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW); } catch (Throwable t) { }
             web.setBackgroundColor(Color.rgb(6, 40, 19));
@@ -336,7 +338,10 @@ public class MainActivity extends Activity {
     private void carregarServidor() {
         handler.removeCallbacks(tentarServidor);
         emDemo = false;
-        if (web != null) web.loadUrl(URL_TV);
+        if (web != null) {
+            try { web.getSettings().setUseWideViewPort(false); } catch (Throwable t) { }
+            web.loadUrl(URL_TV);
+        }
     }
 
     private void abrirDemo() {
@@ -344,6 +349,8 @@ public class MainActivity extends Activity {
             public void run() {
                 if (emDemo || web == null) return;
                 emDemo = true;
+                // a demonstração se encaixa sozinha na tela: respeita o tamanho real da tela, sem zoom
+                try { web.getSettings().setUseWideViewPort(true); } catch (Throwable t) { }
                 web.loadUrl(DEMO);
                 handler.removeCallbacks(tentarServidor);
                 handler.postDelayed(tentarServidor, TENTAR_DE_NOVO_MS);
