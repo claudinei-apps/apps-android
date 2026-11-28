@@ -1,4 +1,20 @@
-/* Ajusta o quadro para preencher a tela inteira (sem faixas nas laterais). */
+/* Ajusta o quadro para preencher a tela inteira (sem faixas nas laterais) e define os tempos. */
+
+// Tempos (milissegundos). O ciclo todo continua em 30 segundos.
+// [quando comeca a frear, quanto tempo leva freando] de cada algarismo, da esquerda para a direita
+PLANO = [[2500, 2000], [5500, 2000], [8500, 2200], [11500, 4200]];
+FESTA_MS = 8000;   // tempo da milhar grande depois de sorteada
+
+// repete a musica de comemoracao enquanto a milhar fica na tela
+(function () {
+  var festaOriginal = festa;
+  festa = function (res) {
+    festaOriginal(res);
+    setTimeout(somFesta, 2600);
+    setTimeout(somFesta, 5200);
+  };
+})();
+
 (function () {
   function g(id) { return document.getElementById(id); }
   function pos(el, l, w) {
@@ -45,9 +61,8 @@
   }
   window.addEventListener('resize', function () { setTimeout(aplicar, 30); });
   window.addEventListener('load', function () { setTimeout(aplicar, 30); });
-  setInterval(function () { chave = chave; aplicar(); }, 700);
+  setInterval(aplicar, 700);
   aplicar();
-  // a rotina antiga recoloca o quadro quando o tamanho muda; reaplica logo depois
   setInterval(function () {
     var st = g('stage');
     if (st.style.width === '' || parseInt(st.style.width, 10) < 1568) chave = '';

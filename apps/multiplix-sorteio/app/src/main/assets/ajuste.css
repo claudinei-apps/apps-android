@@ -3,3 +3,9 @@
 @keyframes logoPula{0%,100%{transform:rotate(-10deg) scale(.56)}50%{transform:rotate(-8deg) scale(.6)}}
 #slogan{left:190px;top:258px;font-size:44px}
 #sub{left:330px;top:304px;width:190px}
+
+/* comemoracao mais longa: confete cai varias vezes e a milhar fica pulsando */
+.cf{-webkit-animation-iteration-count:4!important;animation-iteration-count:4!important}
+#festa.on #fbox{-webkit-animation:zoom .6s ease-out both,pulsa 1.2s ease-in-out .8s infinite;animation:zoom .6s ease-out both,pulsa 1.2s ease-in-out .8s infinite}
+@-webkit-keyframes pulsa{0%,100%{-webkit-transform:scale(1)}50%{-webkit-transform:scale(1.07)}}
+@keyframes pulsa{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
