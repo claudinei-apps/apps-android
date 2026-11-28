@@ -3,29 +3,66 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body{font-family:Arial Black,Arial,sans-serif;background:linear-gradient(90deg,#5fc21e 0%,#c8e63a 40%,#fbf3c4 50%,#c8e63a 60%,#a6dc1a 100%);display:flex;align-items:center;justify-content:center;padding:3vmin;color:#fff}
-.box{width:100%;max-width:520px;text-align:center}
-.logo{font-size:15vmin;font-weight:900;line-height:.85;color:#fffbd0;text-shadow:0 1.2vmin 0 #0c5a1c,0 2vmin 0 #063d12;letter-spacing:-1px}
-.logo b{color:#fffbd0}
-.sub{font-style:italic;font-weight:900;color:#0c5a1c;font-size:5.5vmin;margin:2vmin 0 3vmin}
-.painel{background:linear-gradient(#2fa22a,#0c5a1c);border:.8vmin solid #e8f21c;border-radius:4vmin;padding:2.5vmin;box-shadow:0 1vmin 2vmin rgba(0,0,0,.3)}
-.cada{display:inline-block;background:linear-gradient(#e8362b,#a00d0d);border-radius:5vmin;padding:1vmin 6vmin;font-size:7vmin;margin-top:-6vmin;margin-bottom:2vmin;border:.5vmin solid #e8f21c}
-.cada span{color:#ffe81a}
-.l{display:flex;align-items:center;margin:1.6vmin 0;background:linear-gradient(#fff36a,#f7c600);border-radius:6vmin;border:.6vmin solid #e8f21c;overflow:hidden}
-.n{flex:0 0 46%;background:linear-gradient(#146b22,#06330f);color:#fff;font-style:italic;font-size:5.5vmin;padding:2.4vmin 1vmin;border-radius:6vmin;border:.5vmin solid #e8f21c}
-.v{flex:1;color:#8a0f0f;font-size:7vmin}
-.rod{margin-top:3vmin;font-size:3.6vmin;color:#0c5a1c;font-family:Arial,sans-serif;font-weight:bold}
+html,body{width:100%;height:100%;overflow:hidden;background:#8bd400}
+body{font-family:Arial Black,Arial,sans-serif;position:relative}
+#st{position:absolute;left:0;top:0;width:1568px;height:884px;transform-origin:0 0;
+background:linear-gradient(90deg,#4cb82a 0,#4cb82a 8%,#c8e63a 8%,#fbf3c4 40%,#fbf3c4 55%,#e4ee80 55%,#c3e61c 100%)}
+.pill{position:absolute;background:linear-gradient(#1a7a26,#06330f);border:5px solid #e8f21c;color:#fff;font-style:italic;font-weight:900;display:flex;align-items:center;justify-content:center;border-radius:60px}
+.logo{position:absolute;left:100px;top:30px;width:430px;text-align:center;font-size:110px;line-height:.85;font-weight:900;color:#fffbd0;text-shadow:0 8px 0 #0c5a1c,0 16px 0 #063d12;transform:rotate(-6deg)}
+.sub{position:absolute;left:170px;top:250px;font-style:italic;font-weight:900;color:#0c5a1c;font-size:46px}
+.pc{position:absolute;left:40px;top:370px;width:540px;height:340px;background:linear-gradient(#2fa22a,#0c5a1c);border:5px solid #e8f21c;border-radius:30px}
+.cada{position:absolute;left:120px;top:350px;width:410px;height:70px;background:linear-gradient(#e8362b,#a00d0d);border-radius:40px;color:#fff;font-size:48px;display:flex;align-items:center;justify-content:center;gap:14px}
+.cada span{color:#ffe81a;font-size:62px}
+.cl{position:absolute;left:60px;width:500px;height:62px;background:linear-gradient(#fff36a,#f7c600);border:4px solid #e8f21c;border-radius:34px}
+.cl .pill{left:0;top:0;width:235px;height:54px;font-size:32px;border-width:3px}
+.cl .v{position:absolute;right:30px;top:0;height:54px;line-height:54px;font-size:44px;color:#8a0f0f;font-weight:900}
+.tit{position:absolute;left:612px;top:36px;width:920px;height:100px;background:linear-gradient(#fffbd0,#e8e8a0);border:6px solid #1a7a26;border-radius:50px;font-size:60px;font-style:italic;color:#0c3a14;display:flex;align-items:center;justify-content:center;font-weight:900}
+.rp{position:absolute;left:622px;top:165px;width:906px;height:520px;background:linear-gradient(#2fa22a,#0c5a1c);border:5px solid #1a7a26;border-radius:40px}
+.rl{position:absolute;left:640px;width:870px;height:105px;background:linear-gradient(#fffbd0,#f0ecc0);border-radius:50px}
+.rl .pill{left:0;top:0;width:380px;height:105px;font-size:56px;border-radius:55px}
+.rl .num{position:absolute;left:380px;right:0;top:0;height:105px;display:flex;align-items:center;justify-content:center;font-size:96px;font-weight:900;color:#0c3a14}
+.info{height:110px;top:735px;font-style:normal;justify-content:flex-start;gap:18px;padding-left:24px;border-radius:55px}
+.info small{display:block;font-size:26px}
+.info b{display:block;font-size:44px;line-height:1.05}
+.info div{text-align:left;font-family:Arial,sans-serif}
+.ic{font-size:60px}
 </style></head>
-<body><div class="box">
+<body><div id="st">
 <div class="logo">MULT<br>PLIX</div>
 <div class="sub">Escolha ganhar</div>
-<div class="painel">
+<div class="pc"></div>
 <div class="cada">Cada <span>1,00</span></div>
-<div class="l"><div class="n">MILHAR</div><div class="v">3.000,00</div></div>
-<div class="l"><div class="n">CENTENA</div><div class="v">500,00</div></div>
-<div class="l"><div class="n">DEZENA</div><div class="v">50,00</div></div>
-<div class="l"><div class="n">UNIDADE</div><div class="v">5,00</div></div>
+<div class="cl" style="top:455px"><div class="pill">MILHAR</div><div class="v">3.000,00</div></div>
+<div class="cl" style="top:522px"><div class="pill">CENTENA</div><div class="v">500,00</div></div>
+<div class="cl" style="top:589px"><div class="pill">DEZENA</div><div class="v">50,00</div></div>
+<div class="cl" style="top:656px"><div class="pill">UNIDADE</div><div class="v">5,00</div></div>
+
+<div class="tit">RESULTADO DO SORTEIO</div>
+<div class="rp"></div>
+<div class="rl" style="top:180px"><div class="pill">MILHAR</div><div class="num" id="m"></div></div>
+<div class="rl" style="top:305px"><div class="pill">CENTENA</div><div class="num" id="c"></div></div>
+<div class="rl" style="top:430px"><div class="pill">DEZENA</div><div class="num" id="d"></div></div>
+<div class="rl" style="top:555px"><div class="pill">UNIDADE</div><div class="num" id="u"></div></div>
+
+<div class="pill info" style="left:150px;width:420px"><span class="ic">&#128197;</span><div><small>CONCURSO</small><b>N&ordm; <span id="co"></span></b></div></div>
+<div class="pill info" style="left:595px;width:440px"><span class="ic">&#128197;</span><div><small>DATA</small><b id="da"></b></div></div>
+<div class="pill info" style="left:1065px;width:430px"><span class="ic">&#128339;</span><div><small>HOR&Aacute;RIO</small><b id="ho"></b></div></div>
 </div>
-<div class="rod">Aposta mínima R$ 1,00</div>
-</div></body></html>
+<script>
+// Resultado (troque aqui ou chame setResultado('1899','58426','27/11/2026','20:00:00'))
+function setResultado(milhar,concurso,data,hora){
+  milhar=String(milhar).padStart(4,'0');
+  document.getElementById('m').textContent=milhar;
+  document.getElementById('c').textContent=milhar.slice(-3);
+  document.getElementById('d').textContent=milhar.slice(-2);
+  document.getElementById('u').textContent=milhar.slice(-1);
+  document.getElementById('co').textContent=concurso;
+  document.getElementById('da').textContent=data;
+  document.getElementById('ho').textContent=hora;
+}
+setResultado('1899','58426','27/11/2026','20:00:00');
+function fit(){var s=Math.min(innerWidth/1568,innerHeight/884);var st=document.getElementById('st');
+ st.style.transform='translate('+((innerWidth-1568*s)/2)+'px,'+((innerHeight-884*s)/2)+'px) scale('+s+')';}
+addEventListener('resize',fit);fit();
+</script>
+</body></html>
