@@ -6,115 +6,116 @@
 <title>Multiplix TV</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;overflow:hidden}
-body{font-family:Arial,Helvetica,sans-serif;color:#fff;
- background:#0a5a26;background:radial-gradient(ellipse at center,#22a447 0%,#0b6a2c 45%,#053d18 100%)}
-.gold{color:#ffd23a}
-.top{height:21vh;text-align:center;position:relative}
-.logo{font-size:10.5vh;font-weight:900;font-style:italic;letter-spacing:.3vw;line-height:13vh;padding-top:1vh;
- text-shadow:0 .5vh 0 #6b4e00,0 1vh 2vh rgba(0,0,0,.6)}
-.logo .m{color:#f2f2f2}.logo .p{color:#ffc928}
-.pill{display:inline-block;background:#c4161c;background:linear-gradient(#e2262c,#9c0f14);border:.5vh solid #ffd23a;
- border-radius:5vh;padding:.4vh 4vw;font-size:4.2vh;font-weight:900;font-style:italic;box-shadow:0 .6vh 1.5vh rgba(0,0,0,.5)}
-.clover{position:absolute;top:3vh;font-size:13vh;color:#29c24f;text-shadow:0 0 2vh #0f0,0 .5vh 0 #0a4}
-.cl1{left:3vw}.cl2{right:3vw}
-.mid{display:-webkit-box;display:flex;height:69vh;padding:0 1.5vw}
-.panel{background:rgba(3,50,20,.85);border:.6vh solid #e3b21b;border-radius:2vh;box-shadow:0 0 2vh rgba(255,210,58,.4)}
-.left{width:23vw;padding:1.5vh 1vw;align-self:flex-start}
-.left h3{text-align:center;color:#ffd23a;font-size:4.4vh;margin-bottom:1vh;font-weight:900}
-.bet{display:-webkit-box;display:flex;-webkit-box-align:center;align-items:center;background:#0c4d22;border:.35vh solid #e3b21b;border-radius:1.4vh;margin:1vh 0;overflow:hidden}
-.bet i{display:block;width:5.5vw;text-align:center;font-style:normal;font-size:5vh;background:#c4161c;color:#ffd23a;padding:.6vh 0}
-.bet div{-webkit-box-flex:1;flex:1;text-align:center}
-.bet b{display:block;font-size:3.6vh}
-.bet small{display:block;font-size:2.2vh;color:#ffd23a}
-.center{-webkit-box-flex:1;flex:1;margin:0 1.5vw;text-align:center}
-.rh{display:inline-block;background:#0c4d22;border:.5vh solid #e3b21b;border-radius:4vh;padding:.5vh 3vw;font-size:4.6vh;font-weight:900;color:#ffd23a;margin-bottom:1.5vh}
-.board{background:#7a1010;background:linear-gradient(#a21a1a,#5e0b0b);border:1vh solid #e3b21b;border-radius:3vh;padding:1.5vh 1.5vw;
- box-shadow:0 0 3vh rgba(255,210,58,.7),inset 0 0 2vh rgba(0,0,0,.5)}
-.row{display:-webkit-box;display:flex;height:10.5vh;margin:1.2vh 0;border:.4vh solid #e3b21b;border-radius:1.5vh;overflow:hidden}
-.row .lb{width:30%;background:#c4161c;background:linear-gradient(#e0262b,#9c0f14);color:#ffd23a;font-size:5vh;font-weight:900;line-height:9.7vh}
-.row .vl{-webkit-box-flex:1;flex:1;background:#f4f4f4;background:linear-gradient(#fff,#d9d9d9);color:#111;font-size:8.5vh;font-weight:900;line-height:9.7vh;letter-spacing:1.2vw}
-.row.win .vl{animation:pisca .5s 6 alternate}
-@keyframes pisca{from{background:#fff}to{background:#ffe27a}}
-@-webkit-keyframes pisca{from{background:#fff}to{background:#ffe27a}}
-.vl .spin{color:#aaa}
-.vl .pop{color:#c4161c;display:inline-block;animation:pop .6s 1}
-@keyframes pop{0%{transform:scale(2.2)}100%{transform:scale(1)}}
-@-webkit-keyframes pop{0%{-webkit-transform:scale(2.2)}100%{-webkit-transform:scale(1)}}
-.right{width:23vw;padding:1.5vh 1vw;align-self:flex-start;text-align:center}
-.right h4{font-size:3.8vh;font-weight:900}
-.conc{background:#c4161c;border:.4vh solid #ffd23a;border-radius:1.4vh;font-size:5.2vh;font-weight:900;margin:.8vh 0 1.4vh}
-.info{border-top:.3vh solid rgba(227,178,27,.6);padding:1.2vh 0;text-align:left;display:-webkit-box;display:flex;-webkit-box-align:center;align-items:center}
-.info span{font-size:5.5vh;width:6vw;text-align:center;color:#ffd23a}
-.info b{display:block;font-size:2.8vh;color:#ffd23a}
-.info em{display:block;font-style:normal;font-size:4.2vh;font-weight:900}
-.status{margin-top:1vh;background:#0c4d22;border:.35vh solid #e3b21b;border-radius:1.4vh;padding:1vh;font-size:3vh}
-.status b{display:block;font-size:6vh;color:#ffd23a}
-.hist{margin-top:1vh;font-size:2.6vh;color:#d8f5df}
-.hist div{display:-webkit-box;display:flex;-webkit-box-pack:justify;justify-content:space-between;padding:.2vh .5vw;border-bottom:.2vh solid rgba(255,255,255,.12)}
-.hist div b{color:#ffd23a;letter-spacing:.3vw}
-.bottom{position:absolute;left:0;right:0;bottom:0;height:10vh;text-align:center}
-.stage{display:inline-block;width:46vw;height:6vh;margin-top:2vh;border-radius:50%;background:#1fb14a;border:.8vh solid #e3b21b;box-shadow:0 0 4vh #ffd23a}
-.coins{position:absolute;bottom:1vh;font-size:9vh;color:#ffc928;text-shadow:0 .5vh 0 #8a6500}
-.co1{left:3vw}.co2{right:3vw}
-.demo{position:absolute;left:0;right:0;bottom:0;background:rgba(183,28,28,.92);color:#fff;font-weight:bold;font-size:2.4vh;text-align:center;padding:.5vh}
+html,body{width:100%;height:100%;overflow:hidden;background:#5fbf1f}
+body{font-family:"Arial Rounded MT Bold",Arial,Helvetica,sans-serif;font-weight:900}
+#stage{position:absolute;left:0;top:0;width:1568px;height:883px;overflow:hidden;-webkit-transform-origin:0 0;transform-origin:0 0;
+ background:linear-gradient(90deg,#5fbf1f 0,#6cc61c 130px,#c9e61a 130px,#d4ea1c 330px,#f6f1bd 330px,#f8f3c6 865px,#f3f27a 865px,#e6f21d 975px,#dff01e 975px,#dcef1f 1568px)}
+.abs{position:absolute}
+
+/* ---------- logo ---------- */
+#logo{position:absolute;left:40px;top:70px;width:660px;height:480px;-webkit-transform:rotate(-10deg);transform:rotate(-10deg)}
+.lt{position:absolute;white-space:nowrap;line-height:1;letter-spacing:-2px}
+.lt.back{color:#2f8a1e;-webkit-text-stroke:26px #8fd51f}
+.lt.front{color:#fbf6d4;text-shadow:0 3px 0 #e8e2b0}
+.l1{left:40px;top:10px;font-size:200px}
+.l2{left:110px;top:190px;font-size:200px}
+.l2 .x{font-size:270px}
+
+/* ---------- título ---------- */
+#tit{left:640px;top:35px;width:885px;height:100px;border-radius:50px;border:6px solid #2f8a1e;
+ background:linear-gradient(#fdf9dc,#efe9b4);box-shadow:0 5px 0 #1e6b14;
+ text-align:center;line-height:88px;font-size:58px;font-style:italic;color:#143d12;letter-spacing:1px}
+
+/* ---------- painel ---------- */
+#board{left:665px;top:160px;width:860px;height:525px;border-radius:40px;
+ background:linear-gradient(#58b21f,#2f8a1e);border:6px solid #2d8a1c;box-shadow:0 5px 0 #1e6b14}
+.row{position:absolute;left:20px;width:810px;height:108px}
+.vl{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:54px;border:4px solid #f1f4a8;
+ background:linear-gradient(#fffbe2,#f1ecc2);padding-left:330px;text-align:center;color:#145a14;
+ font-size:104px;line-height:98px;letter-spacing:3px;font-weight:900;white-space:nowrap}
+.lb{position:absolute;left:0;top:0;width:330px;height:108px;border-radius:54px;border:4px solid #e9ef1e;
+ background:linear-gradient(#1f6a22,#0e4a16);color:#fff;font-style:italic;font-size:54px;line-height:98px;text-align:center;letter-spacing:0}
+.row.win .vl{-webkit-animation:pisca .5s 6 alternate;animation:pisca .5s 6 alternate}
+@keyframes pisca{from{background:#fffbe2}to{background:#fff08a}}
+@-webkit-keyframes pisca{from{background:#fffbe2}to{background:#fff08a}}
+.spin{color:#9aa97a}
+.pop{display:inline-block;color:#c4161c;-webkit-animation:pop .6s 1;animation:pop .6s 1}
+@keyframes pop{0%{transform:scale(2)}100%{transform:scale(1)}}
+@-webkit-keyframes pop{0%{-webkit-transform:scale(2)}100%{-webkit-transform:scale(1)}}
+
+/* ---------- slogan ---------- */
+#slogan{left:160px;top:600px;font-size:62px;font-style:italic;color:#143d12;white-space:nowrap;font-weight:800;-webkit-transform:rotate(-4deg);transform:rotate(-4deg)}
+#slogan b{font-weight:900}
+#sub{left:400px;top:662px;width:210px;height:30px}
+
+/* ---------- rodapé ---------- */
+.pill{position:absolute;top:735px;height:110px;border-radius:55px;border:5px solid #e9ef1e;
+ background:linear-gradient(#1f6a22,#0e4a16);box-shadow:0 4px 0 #0a3a10;color:#fff}
+.pill svg{position:absolute;left:30px;top:15px;width:66px;height:72px}
+.pill .t{position:absolute;left:125px;top:10px;font-size:29px;line-height:34px;letter-spacing:1px}
+.pill .v{position:absolute;left:125px;top:40px;font-size:46px;line-height:52px}
 </style>
 </head>
 <body>
-<div class="top">
-  <span class="clover cl1">&#9827;</span><span class="clover cl2">&#9827;</span>
-  <div class="logo"><span class="m">MULTI</span><span class="p">PLIX</span></div>
-  <div class="pill">JOGO DE MILHAR</div>
-</div>
+<div id="stage">
 
-<div class="mid">
-  <div class="panel left">
-    <h3>APOSTE EM:</h3>
-    <div class="bet"><i>&#9822;</i><div><b>MILHAR</b><small>R$ 1,00 paga R$ 3.000,00</small></div></div>
-    <div class="bet"><i>&#9819;</i><div><b>CENTENA</b><small>R$ 1,00 paga R$ 500,00</small></div></div>
-    <div class="bet"><i>&#9670;</i><div><b>DEZENA</b><small>R$ 1,00 paga R$ 50,00</small></div></div>
-    <div class="bet"><i>&#9827;</i><div><b>UNIDADE</b><small>R$ 1,00 paga R$ 5,00</small></div></div>
+  <div id="logo">
+    <div class="lt back l1">MULT</div>
+    <div class="lt back l2">PLI<span class="x">X</span></div>
+    <div class="lt front l1">MULT</div>
+    <div class="lt front l2">PLI<span class="x">X</span></div>
   </div>
 
-  <div class="center">
-    <div class="rh" id="titulo">RESULTADO DO SORTEIO</div>
-    <div class="board">
-      <div class="row" id="r0"><div class="lb">MILHAR</div><div class="vl" id="v0">----</div></div>
-      <div class="row" id="r1"><div class="lb">CENTENA</div><div class="vl" id="v1">---</div></div>
-      <div class="row" id="r2"><div class="lb">DEZENA</div><div class="vl" id="v2">--</div></div>
-      <div class="row" id="r3"><div class="lb">UNIDADE</div><div class="vl" id="v3">-</div></div>
-    </div>
+  <div id="slogan" class="abs">Escolha <b>ganhar</b></div>
+  <svg id="sub" class="abs" viewBox="0 0 210 30"><path d="M4 22 Q100 30 206 4" stroke="#143d12" stroke-width="5" fill="none" stroke-linecap="round"/></svg>
+
+  <div id="tit" class="abs">RESULTADO DO SORTEIO</div>
+
+  <div id="board" class="abs">
+    <div class="row" id="r0" style="top:14px"><div class="vl" id="v0">----</div><div class="lb">MILHAR</div></div>
+    <div class="row" id="r1" style="top:137px"><div class="vl" id="v1">---</div><div class="lb">CENTENA</div></div>
+    <div class="row" id="r2" style="top:260px"><div class="vl" id="v2">--</div><div class="lb">DEZENA</div></div>
+    <div class="row" id="r3" style="top:383px"><div class="vl" id="v3">-</div><div class="lb">UNIDADE</div></div>
   </div>
 
-  <div class="panel right">
-    <h4>CONCURSO</h4>
-    <div class="conc" id="conc">N&ordm; 1</div>
-    <div class="info"><span>&#128197;</span><div><b>DATA</b><em id="data">--/--/----</em></div></div>
-    <div class="info"><span>&#128339;</span><div><b>HOR&Aacute;RIO</b><em id="hora">--:--:--</em></div></div>
-    <div class="status" id="status">Pr&oacute;ximo sorteio em<b id="cd">00:30</b></div>
-    <div class="hist" id="hist"></div>
+  <div class="pill" style="left:240px;width:380px">
+    <svg viewBox="0 0 66 72"><rect x="3" y="12" width="60" height="56" rx="9" fill="none" stroke="#f2f31c" stroke-width="5"/><rect x="14" y="2" width="7" height="16" rx="3" fill="#f2f31c"/><rect x="45" y="2" width="7" height="16" rx="3" fill="#f2f31c"/><line x1="3" y1="28" x2="63" y2="28" stroke="#f2f31c" stroke-width="4"/><g fill="#f2f31c"><rect x="13" y="36" width="9" height="8"/><rect x="29" y="36" width="9" height="8"/><rect x="45" y="36" width="9" height="8"/><rect x="13" y="50" width="9" height="8"/><rect x="29" y="50" width="9" height="8"/><rect x="45" y="50" width="9" height="8"/></g></svg>
+    <div class="t">CONCURSO</div><div class="v" id="conc">N&ordm; 58426</div>
   </div>
-</div>
 
-<div class="bottom">
-  <span class="coins co1">&#9679;&#9679;</span>
-  <span class="stage"></span>
-  <span class="coins co2">&#9679;&#9679;</span>
+  <div class="pill" style="left:650px;width:395px">
+    <svg viewBox="0 0 66 72"><rect x="3" y="12" width="60" height="56" rx="9" fill="none" stroke="#f2f31c" stroke-width="5"/><rect x="14" y="2" width="7" height="16" rx="3" fill="#f2f31c"/><rect x="45" y="2" width="7" height="16" rx="3" fill="#f2f31c"/><line x1="3" y1="28" x2="63" y2="28" stroke="#f2f31c" stroke-width="4"/><g fill="#f2f31c"><rect x="13" y="36" width="9" height="8"/><rect x="29" y="36" width="9" height="8"/><rect x="45" y="36" width="9" height="8"/><rect x="13" y="50" width="9" height="8"/><rect x="29" y="50" width="9" height="8"/><rect x="45" y="50" width="9" height="8"/></g></svg>
+    <div class="t">DATA</div><div class="v" id="data">27/11/2026</div>
+  </div>
+
+  <div class="pill" style="left:1070px;width:410px">
+    <svg viewBox="0 0 66 72"><circle cx="33" cy="36" r="30" fill="none" stroke="#f2f31c" stroke-width="6"/><path d="M33 16 V37 L46 49" fill="none" stroke="#f2f31c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="t">HOR&Aacute;RIO</div><div class="v" id="hora">20:00:00</div>
+  </div>
+
 </div>
-<div class="demo">MODO DEMONSTRA&Ccedil;&Atilde;O &mdash; sorteio local, sem liga&ccedil;&atilde;o com as apostas das POS</div>
 
 <script>
-var ESPERA = 30;          // segundos entre sorteios (demonstração)
+var ESPERA = 30;          // segundos entre sorteios
 var MOSTRA = 15;          // segundos mostrando o resultado
 var PASSO = 2500;         // ms entre um algarismo e o seguinte
-var concurso = 1, historico = [];
-try {
-  concurso = parseInt(localStorage.getItem('mpx_conc') || '1', 10) || 1;
-  historico = JSON.parse(localStorage.getItem('mpx_hist') || '[]');
-} catch (e) {}
+var concurso = 58426;
+try { concurso = parseInt(localStorage.getItem('mpx_conc2') || '58426', 10) || 58426; } catch (e) {}
 
 function $(id) { return document.getElementById(id); }
 function pad(n, l) { n = String(n); while (n.length < l) n = '0' + n; return n; }
+
+// ajusta o quadro 1568x883 a qualquer tela
+function ajustar() {
+  var w = window.innerWidth, h = window.innerHeight;
+  var s = Math.min(w / 1568, h / 883);
+  var st = $('stage');
+  st.style.left = Math.round((w - 1568 * s) / 2) + 'px';
+  st.style.top = Math.round((h - 883 * s) / 2) + 'px';
+  st.style.webkitTransform = st.style.transform = 'scale(' + s + ')';
+}
+window.addEventListener('resize', ajustar);
+ajustar();
 
 // algarismo 0-9 sem viés (usa o gerador seguro do aparelho quando existe)
 function digito() {
@@ -133,11 +134,6 @@ function dataHora(d) {
 }
 
 function mostrarConcurso() { $('conc').innerHTML = 'N&ordm; ' + concurso; }
-function mostrarHist() {
-  var h = '';
-  for (var i = 0; i < historico.length && i < 4; i++) h += '<div><span>Nº ' + historico[i].c + '</span><b>' + historico[i].m + '</b></div>';
-  $('hist').innerHTML = h;
-}
 function limparLinhas() {
   for (var i = 0; i < 4; i++) { $('r' + i).className = 'row'; }
   $('v0').innerHTML = '----'; $('v1').innerHTML = '---'; $('v2').innerHTML = '--'; $('v3').innerHTML = '-';
@@ -147,28 +143,23 @@ var relogio = null;
 function contagem() {
   var rest = ESPERA;
   limparLinhas();
-  $('titulo').innerHTML = 'PR&Oacute;XIMO SORTEIO';
   var prox = new Date(Date.now() + ESPERA * 1000);
   var dh = dataHora(prox);
   $('data').textContent = dh.data; $('hora').textContent = dh.hora;
   mostrarConcurso();
-  $('status').innerHTML = 'Pr&oacute;ximo sorteio em<b id="cd"></b>';
-  function tick() {
-    $('cd').textContent = pad(Math.floor(rest / 60), 2) + ':' + pad(rest % 60, 2);
+  relogio = setInterval(function () {
     if (rest <= 0) { clearInterval(relogio); sortear(); return; }
     rest--;
-  }
-  tick();
-  relogio = setInterval(tick, 1000);
+  }, 1000);
 }
 
 /*
- * Ritmo: os 4 algarismos saem da esquerda para a direita (d1 d2 d3 d4).
+ * Ritmo (igual à versão anterior): os 4 algarismos saem da esquerda para a direita.
  *  1º sai: MILHAR 1 _ _ _
  *  2º sai: MILHAR 1 8 _ _  | CENTENA 8 _ _
  *  3º sai: MILHAR 1 8 9 _  | CENTENA 8 9 _ | DEZENA 9 _
  *  4º sai: MILHAR 1 8 9 9  | CENTENA 8 9 9 | DEZENA 9 9 | UNIDADE 9
- * A linha de ordem r (0=milhar ... 3=unidade) mostra os algarismos de índice r a 3.
+ * A linha r (0=milhar ... 3=unidade) mostra os algarismos de índice r a 3.
  */
 function desenhar(res, k, girar) {
   for (var r = 0; r < 4; r++) {
@@ -187,12 +178,9 @@ function desenhar(res, k, girar) {
 }
 
 function sortear() {
-  $('titulo').textContent = 'SORTEANDO...';
-  $('status').innerHTML = 'Sorteio em andamento<b>&#9827;</b>';
   var res = [digito(), digito(), digito(), digito()];
   var k = 0;   // quantos algarismos já saíram
   var giro = setInterval(function () {
-    // só gira o que ainda não saiu (os que já saíram ficam parados)
     var atual = k;
     for (var r = 0; r < 4; r++) {
       var s = '';
@@ -226,20 +214,14 @@ function sortear() {
 }
 
 function fim(m) {
-  $('titulo').textContent = 'RESULTADO DO SORTEIO';
   for (var i = 0; i < 4; i++) $('r' + i).className = 'row win';
   var dh = dataHora(new Date());
   $('data').textContent = dh.data; $('hora').textContent = dh.hora;
-  $('status').innerHTML = 'Resultado do concurso<b>' + m + '</b>';
-  historico.unshift({ c: concurso, m: m });
-  if (historico.length > 10) historico.length = 10;
   concurso++;
-  try { localStorage.setItem('mpx_conc', String(concurso)); localStorage.setItem('mpx_hist', JSON.stringify(historico)); } catch (e) {}
-  mostrarHist();
+  try { localStorage.setItem('mpx_conc2', String(concurso)); } catch (e) {}
   setTimeout(contagem, MOSTRA * 1000);
 }
 
-mostrarHist();
 contagem();
 </script>
 </body>
