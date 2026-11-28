@@ -83,28 +83,41 @@ body{font-family:Poppins,"Arial Black",Arial,sans-serif;font-weight:800}
 
   <div class="pill" style="left:240px;width:382px">
     <svg viewBox="0 0 66 72"><rect x="3" y="12" width="60" height="56" rx="9" fill="none" stroke="#f2f31c" stroke-width="5"/><rect x="14" y="2" width="7" height="16" rx="3" fill="#f2f31c"/><rect x="45" y="2" width="7" height="16" rx="3" fill="#f2f31c"/><line x1="3" y1="28" x2="63" y2="28" stroke="#f2f31c" stroke-width="4"/><g fill="#f2f31c"><rect x="13" y="36" width="9" height="8"/><rect x="29" y="36" width="9" height="8"/><rect x="45" y="36" width="9" height="8"/><rect x="13" y="50" width="9" height="8"/><rect x="29" y="50" width="9" height="8"/><rect x="45" y="50" width="9" height="8"/></g></svg>
-    <div class="t">CONCURSO</div><div class="v" id="conc">N&ordm; 58426</div>
+    <div class="t">CONCURSO</div><div class="v" id="conc">N&ordm; -----</div>
   </div>
 
   <div class="pill" style="left:652px;width:394px">
     <svg viewBox="0 0 66 72"><rect x="3" y="12" width="60" height="56" rx="9" fill="none" stroke="#f2f31c" stroke-width="5"/><rect x="14" y="2" width="7" height="16" rx="3" fill="#f2f31c"/><rect x="45" y="2" width="7" height="16" rx="3" fill="#f2f31c"/><line x1="3" y1="28" x2="63" y2="28" stroke="#f2f31c" stroke-width="4"/><g fill="#f2f31c"><rect x="13" y="36" width="9" height="8"/><rect x="29" y="36" width="9" height="8"/><rect x="45" y="36" width="9" height="8"/><rect x="13" y="50" width="9" height="8"/><rect x="29" y="50" width="9" height="8"/><rect x="45" y="50" width="9" height="8"/></g></svg>
-    <div class="t">DATA</div><div class="v" id="data">27/11/2026</div>
+    <div class="t">DATA</div><div class="v" id="data">--/--/----</div>
   </div>
 
   <div class="pill" style="left:1072px;width:408px">
     <svg viewBox="0 0 66 72"><circle cx="33" cy="36" r="29" fill="none" stroke="#f2f31c" stroke-width="6"/><path d="M33 17 V37 L45 48" fill="none" stroke="#f2f31c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <div class="t">HOR&Aacute;RIO</div><div class="v" id="hora">20:00:00</div>
+    <div class="t">HOR&Aacute;RIO</div><div class="v" id="hora">--:--:--</div>
   </div>
 
 </div>
 </div>
 
 <script>
-var ESPERA = 30;          // segundos entre sorteios
-var MOSTRA = 15;          // segundos mostrando o resultado
+/* Horário junto com o Keno: Keno de 4 em 4 minutos (minutos 00, 04, 08...);
+   Multiplix sempre 2 minutos antes do Keno (minutos 02, 06, 10...). */
+var CICLO = 240000;
+var KENO_OFFSET = 0;
+var ANTES_KENO = 120000;
+var MPX_OFFSET = ((KENO_OFFSET - ANTES_KENO) % CICLO + CICLO) % CICLO;
+var ATRASO_MAX = 30000;
+var REF = new Date(2026, 10, 28, 0, 0, 0).getTime() + MPX_OFFSET;
+var CONC_REF = 58426;
 var PASSO = 2500;         // ms entre um algarismo e o seguinte
-var concurso = 58426;
-try { concurso = parseInt(localStorage.getItem('mpx_conc2') || '58426', 10) || 58426; } catch (e) {}
+
+function proximoSorteio(t) {
+  var d = new Date(t);
+  var meia = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  var k = Math.floor((t - meia - MPX_OFFSET) / CICLO) + 1;
+  return meia + MPX_OFFSET + k * CICLO;
+}
+function numeroConcurso(slot) { return CONC_REF + Math.round((slot - REF) / CICLO); }
 
 function $(id) { return document.getElementById(id); }
 function pad(n, l) { n = String(n); while (n.length < l) n = '0' + n; return n; }
@@ -140,7 +153,7 @@ setInterval(ajustar, 1000);
 ajustar();
 setTimeout(ajustar, 300);
 
-// logo 3D: profundidade (várias cópias deslocadas) + contorno claro + linha verde + letra creme
+// logo 3D
 (function () {
   var lg = $('logo'), h = '';
   var txt = [['l1', 'MULT'], ['l2', 'PLI<span class="x">X</span>']];
@@ -156,7 +169,7 @@ setTimeout(ajustar, 300);
   lg.innerHTML = h;
 })();
 
-// algarismo 0-9 sem viés (usa o gerador seguro do aparelho quando existe)
+// algarismo 0-9 sem viés
 function digito() {
   var c = window.crypto || window.msCrypto;
   if (c && c.getRandomValues) {
@@ -167,34 +180,17 @@ function digito() {
   return Math.floor(Math.random() * 10);
 }
 
-function dataHora(d) {
-  return { data: pad(d.getDate(), 2) + '/' + pad(d.getMonth() + 1, 2) + '/' + d.getFullYear(),
-           hora: pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2) + ':' + pad(d.getSeconds(), 2) };
+function mostrarRodape(slot) {
+  var d = new Date(slot);
+  $('conc').innerHTML = 'N&ordm; ' + numeroConcurso(slot);
+  $('data').textContent = pad(d.getDate(), 2) + '/' + pad(d.getMonth() + 1, 2) + '/' + d.getFullYear();
+  $('hora').textContent = pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2) + ':' + pad(d.getSeconds(), 2);
 }
-
-function mostrarConcurso() { $('conc').innerHTML = 'N&ordm; ' + concurso; }
 function limparLinhas() {
   for (var i = 0; i < 4; i++) { $('r' + i).className = 'row'; }
   $('v0').innerHTML = '----'; $('v1').innerHTML = '---'; $('v2').innerHTML = '--'; $('v3').innerHTML = '-';
 }
 
-var relogio = null;
-function contagem() {
-  var rest = ESPERA;
-  limparLinhas();
-  var dh = dataHora(new Date(Date.now() + ESPERA * 1000));
-  $('data').textContent = dh.data; $('hora').textContent = dh.hora;
-  mostrarConcurso();
-  relogio = setInterval(function () {
-    if (rest <= 0) { clearInterval(relogio); sortear(); return; }
-    rest--;
-  }, 1000);
-}
-
-/*
- * Ritmo (igual à versão anterior): os 4 algarismos saem da esquerda para a direita.
- * A linha r (0=milhar ... 3=unidade) mostra os algarismos de índice r a 3.
- */
 function desenhar(res, k, girar) {
   for (var r = 0; r < 4; r++) {
     var s = '';
@@ -221,9 +217,19 @@ function girarRestantes(res, k) {
   }
 }
 
-function sortear() {
+var sorteando = false;
+var ultimoSlot = 0;
+try { ultimoSlot = parseInt(localStorage.getItem('mpx_tv_ultimo_slot') || '0', 10) || 0; } catch (e) {}
+var proximo = proximoSorteio(Date.now());
+
+function sortear(slot) {
+  sorteando = true;
+  ultimoSlot = slot;
+  try { localStorage.setItem('mpx_tv_ultimo_slot', String(slot)); } catch (e) {}
+  limparLinhas();
+  mostrarRodape(slot);
   var res = [digito(), digito(), digito(), digito()];
-  var k = 0;   // quantos algarismos já saíram
+  var k = 0;
   var giro = setInterval(function () { girarRestantes(res, k); }, 80);
   function revelar() {
     k++;
@@ -235,21 +241,24 @@ function sortear() {
       return;
     }
     desenhar(res, 4, false);
-    fim();
+    for (var i = 0; i < 4; i++) $('r' + i).className = 'row win';
+    sorteando = false;   // o resultado fica na tela até o próximo sorteio
   }
   setTimeout(revelar, PASSO);
 }
 
-function fim() {
-  for (var i = 0; i < 4; i++) $('r' + i).className = 'row win';
-  var dh = dataHora(new Date());
-  $('data').textContent = dh.data; $('hora').textContent = dh.hora;
-  concurso++;
-  try { localStorage.setItem('mpx_conc2', String(concurso)); } catch (e) {}
-  setTimeout(contagem, MOSTRA * 1000);
+function tique() {
+  if (sorteando) return;
+  var agora = Date.now();
+  if (agora < proximo) return;
+  var slot = proximo;
+  proximo = proximoSorteio(agora);
+  if (agora - slot <= ATRASO_MAX && slot !== ultimoSlot) sortear(slot);
 }
 
-contagem();
+limparLinhas();
+mostrarRodape(proximo);
+setInterval(tique, 250);
 </script>
 </body>
 </html>
