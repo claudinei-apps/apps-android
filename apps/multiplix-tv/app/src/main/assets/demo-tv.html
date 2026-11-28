@@ -4,92 +4,92 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Multiplix TV</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Poppins:ital,wght@0,700;0,800;0,900;1,800;1,900&family=Kalam:wght@700&display=block">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;overflow:hidden;background:#5fbf1f}
-body{font-family:"Arial Rounded MT Bold",Arial,Helvetica,sans-serif;font-weight:900}
+html,body{width:100%;height:100%;overflow:hidden;background:#62c01e}
+body{font-family:Poppins,"Arial Black",Arial,sans-serif;font-weight:800}
 #stage{position:absolute;left:0;top:0;width:1568px;height:883px;overflow:hidden;-webkit-transform-origin:0 0;transform-origin:0 0;
- background:linear-gradient(90deg,#5fbf1f 0,#6cc61c 130px,#c9e61a 130px,#d4ea1c 330px,#f6f1bd 330px,#f8f3c6 865px,#f3f27a 865px,#e6f21d 975px,#dff01e 975px,#dcef1f 1568px)}
+ background:linear-gradient(90deg,#55b81d 0,#6fc81c 128px,#bfe01a 128px,#e2ee3a 330px,#f7f2c2 330px,#faf5cf 600px,#f6f1c0 862px,#f2f18a 862px,#f3f3a0 975px,#e3f12a 975px,#d6ec1c 1568px)}
 .abs{position:absolute}
 
 /* ---------- logo ---------- */
-#logo{position:absolute;left:40px;top:70px;width:660px;height:480px;-webkit-transform:rotate(-10deg);transform:rotate(-10deg)}
-.lt{position:absolute;white-space:nowrap;line-height:1;letter-spacing:-2px}
-.lt.back{color:#2f8a1e;-webkit-text-stroke:26px #8fd51f}
-.lt.front{color:#fbf6d4;text-shadow:0 3px 0 #e8e2b0}
-.l1{left:40px;top:10px;font-size:200px}
-.l2{left:110px;top:190px;font-size:200px}
-.l2 .x{font-size:270px}
+#logo{position:absolute;left:52px;top:58px;width:680px;height:500px;-webkit-transform:rotate(-12deg);transform:rotate(-12deg)}
+.lt{position:absolute;white-space:nowrap;line-height:1;font-family:Fredoka,"Arial Rounded MT Bold",Arial,sans-serif;font-weight:700;letter-spacing:-4px}
+.l1{left:50px;top:20px;font-size:215px}
+.l2{left:110px;top:200px;font-size:215px}
+.l2 .x{font-size:300px;line-height:.8;letter-spacing:0}
+.ext{color:#1f6a1c;-webkit-text-stroke:34px #1f6a1c}
+.ext.esc{color:#14531a;-webkit-text-stroke:34px #14531a}
+.out{color:#a8de1f;-webkit-text-stroke:34px #a8de1f}
+.mid{color:#3f9c1f;-webkit-text-stroke:14px #3f9c1f}
+.front{color:#fbf7dc}
 
 /* ---------- título ---------- */
-#tit{left:640px;top:35px;width:885px;height:100px;border-radius:50px;border:6px solid #2f8a1e;
- background:linear-gradient(#fdf9dc,#efe9b4);box-shadow:0 5px 0 #1e6b14;
- text-align:center;line-height:88px;font-size:58px;font-style:italic;color:#143d12;letter-spacing:1px}
+#tit{left:638px;top:34px;width:888px;height:102px;border-radius:51px;border:5px solid #2f8d1c;
+ background:linear-gradient(#fffbe4,#f1ebbb);box-shadow:0 0 0 5px #c5e81f,0 7px 0 5px #2a7f19;
+ text-align:center;line-height:90px;font-size:60px;font-style:italic;font-weight:900;color:#163f13;letter-spacing:.5px}
 
 /* ---------- painel ---------- */
-#board{left:665px;top:160px;width:860px;height:525px;border-radius:40px;
- background:linear-gradient(#58b21f,#2f8a1e);border:6px solid #2d8a1c;box-shadow:0 5px 0 #1e6b14}
-.row{position:absolute;left:20px;width:810px;height:108px}
-.vl{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:54px;border:4px solid #f1f4a8;
- background:linear-gradient(#fffbe2,#f1ecc2);padding-left:330px;text-align:center;color:#145a14;
- font-size:104px;line-height:98px;letter-spacing:3px;font-weight:900;white-space:nowrap}
-.lb{position:absolute;left:0;top:0;width:330px;height:108px;border-radius:54px;border:4px solid #e9ef1e;
- background:linear-gradient(#1f6a22,#0e4a16);color:#fff;font-style:italic;font-size:54px;line-height:98px;text-align:center;letter-spacing:0}
+#board{left:664px;top:162px;width:862px;height:522px;border-radius:40px;
+ background:linear-gradient(#5db820,#3a961d);border:5px solid #c5e81f;box-shadow:0 0 0 5px #2f8d1c,0 8px 0 5px #23731a}
+.row{position:absolute;left:18px;width:816px;height:108px}
+.vl{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:54px;border:4px solid #f4f7b4;
+ background:linear-gradient(#fffbe6,#f3eec6);padding-left:340px;text-align:center;color:#17501a;
+ font-size:108px;line-height:100px;letter-spacing:4px;font-weight:900;white-space:nowrap;box-shadow:inset 0 -4px 0 rgba(0,0,0,.06)}
+.lb{position:absolute;left:0;top:0;width:345px;height:108px;border-radius:54px;border:5px solid #e6ef1e;
+ background:linear-gradient(#22702a,#0f4a19);color:#fff;font-style:italic;font-weight:900;font-size:52px;line-height:98px;text-align:center;
+ text-shadow:0 3px 0 #0b3812;box-shadow:3px 3px 0 #0b3812}
 .row.win .vl{-webkit-animation:pisca .5s 6 alternate;animation:pisca .5s 6 alternate}
-@keyframes pisca{from{background:#fffbe2}to{background:#fff08a}}
-@-webkit-keyframes pisca{from{background:#fffbe2}to{background:#fff08a}}
-.spin{color:#9aa97a}
+@keyframes pisca{from{background:#fffbe6}to{background:#fff08a}}
+@-webkit-keyframes pisca{from{background:#fffbe6}to{background:#fff08a}}
+.spin{color:#9fae80}
 .pop{display:inline-block;color:#c4161c;-webkit-animation:pop .6s 1;animation:pop .6s 1}
 @keyframes pop{0%{transform:scale(2)}100%{transform:scale(1)}}
 @-webkit-keyframes pop{0%{-webkit-transform:scale(2)}100%{-webkit-transform:scale(1)}}
 
 /* ---------- slogan ---------- */
-#slogan{left:160px;top:600px;font-size:62px;font-style:italic;color:#143d12;white-space:nowrap;font-weight:800;-webkit-transform:rotate(-4deg);transform:rotate(-4deg)}
-#slogan b{font-weight:900}
-#sub{left:400px;top:662px;width:210px;height:30px}
+#slogan{left:158px;top:605px;font-family:Kalam,"Comic Sans MS",cursive;font-weight:700;font-size:66px;color:#163f13;white-space:nowrap;
+ -webkit-transform:rotate(-6deg);transform:rotate(-6deg)}
+#sub{left:395px;top:648px;width:215px;height:40px}
 
 /* ---------- rodapé ---------- */
-.pill{position:absolute;top:735px;height:110px;border-radius:55px;border:5px solid #e9ef1e;
- background:linear-gradient(#1f6a22,#0e4a16);box-shadow:0 4px 0 #0a3a10;color:#fff}
-.pill svg{position:absolute;left:30px;top:15px;width:66px;height:72px}
-.pill .t{position:absolute;left:125px;top:10px;font-size:29px;line-height:34px;letter-spacing:1px}
-.pill .v{position:absolute;left:125px;top:40px;font-size:46px;line-height:52px}
+.pill{position:absolute;top:733px;height:112px;border-radius:56px;border:5px solid #e6ef1e;
+ background:linear-gradient(#22702a,#0f4a19);box-shadow:0 0 0 4px #2f8d1c,0 6px 0 4px #23731a;color:#fff}
+.pill svg{position:absolute;left:34px;top:18px;width:62px;height:68px}
+.pill .t{position:absolute;left:132px;top:12px;font-size:27px;line-height:32px;font-weight:800;letter-spacing:.5px}
+.pill .v{position:absolute;left:132px;top:42px;font-size:44px;line-height:52px;font-weight:800}
 </style>
 </head>
 <body>
 <div id="stage">
 
-  <div id="logo">
-    <div class="lt back l1">MULT</div>
-    <div class="lt back l2">PLI<span class="x">X</span></div>
-    <div class="lt front l1">MULT</div>
-    <div class="lt front l2">PLI<span class="x">X</span></div>
-  </div>
+  <div id="logo"></div>
 
-  <div id="slogan" class="abs">Escolha <b>ganhar</b></div>
-  <svg id="sub" class="abs" viewBox="0 0 210 30"><path d="M4 22 Q100 30 206 4" stroke="#143d12" stroke-width="5" fill="none" stroke-linecap="round"/></svg>
+  <div id="slogan" class="abs">Escolha ganhar</div>
+  <svg id="sub" class="abs" viewBox="0 0 215 40"><path d="M6 34 Q110 30 210 6" stroke="#163f13" stroke-width="6" fill="none" stroke-linecap="round"/></svg>
 
   <div id="tit" class="abs">RESULTADO DO SORTEIO</div>
 
   <div id="board" class="abs">
-    <div class="row" id="r0" style="top:14px"><div class="vl" id="v0">----</div><div class="lb">MILHAR</div></div>
-    <div class="row" id="r1" style="top:137px"><div class="vl" id="v1">---</div><div class="lb">CENTENA</div></div>
+    <div class="row" id="r0" style="top:12px"><div class="vl" id="v0">----</div><div class="lb">MILHAR</div></div>
+    <div class="row" id="r1" style="top:136px"><div class="vl" id="v1">---</div><div class="lb">CENTENA</div></div>
     <div class="row" id="r2" style="top:260px"><div class="vl" id="v2">--</div><div class="lb">DEZENA</div></div>
-    <div class="row" id="r3" style="top:383px"><div class="vl" id="v3">-</div><div class="lb">UNIDADE</div></div>
+    <div class="row" id="r3" style="top:384px"><div class="vl" id="v3">-</div><div class="lb">UNIDADE</div></div>
   </div>
 
-  <div class="pill" style="left:240px;width:380px">
+  <div class="pill" style="left:240px;width:382px">
     <svg viewBox="0 0 66 72"><rect x="3" y="12" width="60" height="56" rx="9" fill="none" stroke="#f2f31c" stroke-width="5"/><rect x="14" y="2" width="7" height="16" rx="3" fill="#f2f31c"/><rect x="45" y="2" width="7" height="16" rx="3" fill="#f2f31c"/><line x1="3" y1="28" x2="63" y2="28" stroke="#f2f31c" stroke-width="4"/><g fill="#f2f31c"><rect x="13" y="36" width="9" height="8"/><rect x="29" y="36" width="9" height="8"/><rect x="45" y="36" width="9" height="8"/><rect x="13" y="50" width="9" height="8"/><rect x="29" y="50" width="9" height="8"/><rect x="45" y="50" width="9" height="8"/></g></svg>
     <div class="t">CONCURSO</div><div class="v" id="conc">N&ordm; 58426</div>
   </div>
 
-  <div class="pill" style="left:650px;width:395px">
+  <div class="pill" style="left:652px;width:394px">
     <svg viewBox="0 0 66 72"><rect x="3" y="12" width="60" height="56" rx="9" fill="none" stroke="#f2f31c" stroke-width="5"/><rect x="14" y="2" width="7" height="16" rx="3" fill="#f2f31c"/><rect x="45" y="2" width="7" height="16" rx="3" fill="#f2f31c"/><line x1="3" y1="28" x2="63" y2="28" stroke="#f2f31c" stroke-width="4"/><g fill="#f2f31c"><rect x="13" y="36" width="9" height="8"/><rect x="29" y="36" width="9" height="8"/><rect x="45" y="36" width="9" height="8"/><rect x="13" y="50" width="9" height="8"/><rect x="29" y="50" width="9" height="8"/><rect x="45" y="50" width="9" height="8"/></g></svg>
     <div class="t">DATA</div><div class="v" id="data">27/11/2026</div>
   </div>
 
-  <div class="pill" style="left:1070px;width:410px">
-    <svg viewBox="0 0 66 72"><circle cx="33" cy="36" r="30" fill="none" stroke="#f2f31c" stroke-width="6"/><path d="M33 16 V37 L46 49" fill="none" stroke="#f2f31c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="pill" style="left:1072px;width:408px">
+    <svg viewBox="0 0 66 72"><circle cx="33" cy="36" r="29" fill="none" stroke="#f2f31c" stroke-width="6"/><path d="M33 17 V37 L45 48" fill="none" stroke="#f2f31c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <div class="t">HOR&Aacute;RIO</div><div class="v" id="hora">20:00:00</div>
   </div>
 
@@ -117,6 +117,22 @@ function ajustar() {
 window.addEventListener('resize', ajustar);
 ajustar();
 
+// logo 3D: profundidade (várias cópias deslocadas) + contorno claro + linha verde + letra creme
+(function () {
+  var lg = $('logo'), h = '';
+  var txt = [['l1', 'MULT'], ['l2', 'PLI<span class="x">X</span>']];
+  function camada(cls, dx, dy) {
+    for (var i = 0; i < txt.length; i++) {
+      h += '<div class="lt ' + txt[i][0] + ' ' + cls + '" style="margin-left:' + dx + 'px;margin-top:' + dy + 'px">' + txt[i][1] + '</div>';
+    }
+  }
+  for (var p = 26; p >= 1; p--) camada(p > 20 ? 'ext esc' : 'ext', -Math.round(p * 1.3), Math.round(p * 2.6));
+  camada('out', 0, 0);
+  camada('mid', 0, 0);
+  camada('front', 0, 0);
+  lg.innerHTML = h;
+})();
+
 // algarismo 0-9 sem viés (usa o gerador seguro do aparelho quando existe)
 function digito() {
   var c = window.crypto || window.msCrypto;
@@ -143,8 +159,7 @@ var relogio = null;
 function contagem() {
   var rest = ESPERA;
   limparLinhas();
-  var prox = new Date(Date.now() + ESPERA * 1000);
-  var dh = dataHora(prox);
+  var dh = dataHora(new Date(Date.now() + ESPERA * 1000));
   $('data').textContent = dh.data; $('hora').textContent = dh.hora;
   mostrarConcurso();
   relogio = setInterval(function () {
@@ -155,10 +170,6 @@ function contagem() {
 
 /*
  * Ritmo (igual à versão anterior): os 4 algarismos saem da esquerda para a direita.
- *  1º sai: MILHAR 1 _ _ _
- *  2º sai: MILHAR 1 8 _ _  | CENTENA 8 _ _
- *  3º sai: MILHAR 1 8 9 _  | CENTENA 8 9 _ | DEZENA 9 _
- *  4º sai: MILHAR 1 8 9 9  | CENTENA 8 9 9 | DEZENA 9 9 | UNIDADE 9
  * A linha r (0=milhar ... 3=unidade) mostra os algarismos de índice r a 3.
  */
 function desenhar(res, k, girar) {
@@ -177,43 +188,36 @@ function desenhar(res, k, girar) {
   }
 }
 
+function girarRestantes(res, k) {
+  for (var r = 0; r < 4; r++) {
+    var s = '';
+    for (var j = r; j < 4; j++) {
+      s += j < k ? res[j] : '<span class="spin">' + Math.floor(Math.random() * 10) + '</span>';
+    }
+    $('v' + r).innerHTML = s;
+  }
+}
+
 function sortear() {
   var res = [digito(), digito(), digito(), digito()];
   var k = 0;   // quantos algarismos já saíram
-  var giro = setInterval(function () {
-    var atual = k;
-    for (var r = 0; r < 4; r++) {
-      var s = '';
-      for (var j = r; j < 4; j++) {
-        s += j < atual ? res[j] : '<span class="spin">' + Math.floor(Math.random() * 10) + '</span>';
-      }
-      $('v' + r).innerHTML = s;
-    }
-  }, 80);
+  var giro = setInterval(function () { girarRestantes(res, k); }, 80);
   function revelar() {
     k++;
     clearInterval(giro);
     desenhar(res, k, true);
     if (k < 4) {
-      giro = setInterval(function () {
-        for (var r = 0; r < 4; r++) {
-          var s = '';
-          for (var j = r; j < 4; j++) {
-            s += j < k ? res[j] : '<span class="spin">' + Math.floor(Math.random() * 10) + '</span>';
-          }
-          $('v' + r).innerHTML = s;
-        }
-      }, 80);
+      giro = setInterval(function () { girarRestantes(res, k); }, 80);
       setTimeout(revelar, PASSO);
       return;
     }
     desenhar(res, 4, false);
-    fim(res.join(''));
+    fim();
   }
   setTimeout(revelar, PASSO);
 }
 
-function fim(m) {
+function fim() {
   for (var i = 0; i < 4; i++) $('r' + i).className = 'row win';
   var dh = dataHora(new Date());
   $('data').textContent = dh.data; $('hora').textContent = dh.hora;
